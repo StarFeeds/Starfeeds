@@ -126,7 +126,15 @@ async function apiCall<T>(
     let message = error || `API error: ${resp.status}`;
     try {
       const parsed = JSON.parse(error);
-      if (parsed?.detail) message = parsed.detail;
+      if (Array.isArray(parsed?.detail)) {
+        // FastAPI validation errors: [{ loc, msg, ... }]
+        message = parsed.detail
+          .map((e: { msg?: string }) => e?.msg ?? "")
+          .filter(Boolean)
+          .join(", ");
+      } else if (parsed?.detail) {
+        message = parsed.detail;
+      }
     } catch {
       // not JSON; keep raw text
     }

@@ -22,7 +22,10 @@ function passwordStrength(pw: string): { label: string; level: 0 | 1 | 2 | 3 } {
 }
 
 function deriveUsername(email: string): string {
-  return (email.split("@")[0] || "user").replace(/[^a-zA-Z0-9_]/g, "").toLowerCase() || "user";
+  let u = (email.split("@")[0] || "user").replace(/[^a-zA-Z0-9_]/g, "").toLowerCase() || "user";
+  // Backend requires >= 3 chars; pad short local-parts (e.g. "ab@x.com").
+  if (u.length < 3) u = (u + "user").slice(0, 8);
+  return u;
 }
 
 export default function RegisterPage() {
@@ -42,6 +45,10 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
     if (password !== confirm) {
       setError("Passwords do not match");
       return;
