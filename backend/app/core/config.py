@@ -32,11 +32,11 @@ class Settings(BaseSettings):
     # Public URL of the frontend (used for links in emails).
     FRONTEND_URL: str = "http://localhost:3000"
 
-    # Email. Two backends supported:
-    #  - SendGrid over HTTPS (works on hosts that block outbound SMTP, e.g. Render)
-    #  - SMTP (good for local dev)
-    # If neither is configured, sends are a logged no-op so signup still works.
-    # SendGrid takes precedence when SENDGRID_API_KEY is set.
+    # Email backends over HTTPS (work on hosts that block outbound SMTP, e.g.
+    # Render): Resend and SendGrid. SMTP is also supported for local dev.
+    # Precedence: Resend > SendGrid > SMTP. If none configured, sends are a
+    # logged no-op so signup still works.
+    RESEND_API_KEY: str | None = None
     SENDGRID_API_KEY: str | None = None
     SMTP_HOST: str | None = None
     SMTP_PORT: int = 587
@@ -52,7 +52,7 @@ class Settings(BaseSettings):
 
     @property
     def email_enabled(self) -> bool:
-        return bool(self.SENDGRID_API_KEY) or self.smtp_configured
+        return bool(self.RESEND_API_KEY or self.SENDGRID_API_KEY) or self.smtp_configured
 
     @property
     def email_from_address(self) -> str:

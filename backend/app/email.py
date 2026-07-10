@@ -19,7 +19,32 @@ from app.core.config import settings
 
 logger = logging.getLogger("app.email")
 
+RESEND_ENDPOINT = "https://api.resend.com/emails"
 SENDGRID_ENDPOINT = "https://api.sendgrid.com/v3/mail/send"
+
+
+async def _send_via_resend(to: str, subject: str, html: str, text: str) -> bool:
+    payload = {
+        "from": f"{settings.EMAIL_FROM_NAME} <{settings.email_from_address}>",
+        "to": [to],
+        "subject": subject,
+        "html": html,
+        "text": text,
+    }
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.post(
+            RESEND_ENDPOINT,
+            headers={"Authorization": f"Bearer {settings.RESEND_API_KEY}"},
+            json=payload,
+        )
+    if resp.status_code in (200, 201):
+        logger.info("Sent '%s' email to %s via Resend", subject, to)
+        return True
+    logger.error(
+        "Resend send failed (%s) for '%s' to %s: %s",
+        resp.status_code, subject, to, resp.text[:400],
+    )
+    return False
 
 
 async def _send_via_sendgrid(to: str, subject: str, html: str, text: str) -> bool:
@@ -77,6 +102,8 @@ async def send_email(to: str, subject: str, html: str, text: str) -> bool:
         logger.info("Email disabled (no provider configured); skipping '%s' to %s", subject, to)
         return False
     try:
+        if settings.RESEND_API_KEY:
+            return await _send_via_resend(to, subject, html, text)
         if settings.SENDGRID_API_KEY:
             return await _send_via_sendgrid(to, subject, html, text)
         return await _send_via_smtp(to, subject, html, text)
