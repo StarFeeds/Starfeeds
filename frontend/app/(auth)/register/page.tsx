@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/context/auth";
 import { AuthHero, SocialButtons, OrDivider } from "@/components/auth-ui";
 import { Logo } from "@/components/Logo";
 
-const ACCOUNT_TYPES = ["Investor", "Mentor", "Entrepreneur"] as const;
+const ACCOUNT_TYPES = ["Investor", "Mentor", "Innovator"] as const;
 type AccountType = (typeof ACCOUNT_TYPES)[number];
 
 function passwordStrength(pw: string): { label: string; level: 0 | 1 | 2 | 3 } {
