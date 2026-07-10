@@ -28,3 +28,7 @@ build/
 # DB
 *.sqlite3
 postgres-data/
+*.db
+backend.log
+_alembic_tmp.db
+_verify.db

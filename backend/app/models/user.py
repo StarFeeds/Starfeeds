@@ -1,9 +1,20 @@
 from __future__ import annotations
 
-from sqlalchemy import String, Text
+from sqlalchemy import JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
+
+DEFAULT_NOTIFICATION_PREFS: dict[str, bool] = {
+    "comments": True,
+    "collab": True,
+    "mentions": False,
+    "announcements": True,
+    "weekly": True,
+    "important": True,
+    "public_profile": True,
+    "show_online": True,
+}
 
 
 class User(Base, TimestampMixin):
@@ -18,7 +29,12 @@ class User(Base, TimestampMixin):
     headline: Mapped[str] = mapped_column(String(120), default="Entrepreneur")
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
     is_online: Mapped[bool] = mapped_column(default=False)
+
+    notification_prefs: Mapped[dict] = mapped_column(
+        JSON, default=lambda: dict(DEFAULT_NOTIFICATION_PREFS)
+    )
 
     ideas: Mapped[list["Idea"]] = relationship(
         back_populates="author", cascade="all, delete-orphan"
@@ -29,6 +45,9 @@ class User(Base, TimestampMixin):
     saved: Mapped[list["SavedIdea"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+    comments: Mapped[list["Comment"]] = relationship(
+        back_populates="author", cascade="all, delete-orphan"
+    )
 
 
-from app.models.idea import Idea, SavedIdea, Upvote  # noqa: E402
+from app.models.idea import Comment, Idea, SavedIdea, Upvote  # noqa: E402,F401

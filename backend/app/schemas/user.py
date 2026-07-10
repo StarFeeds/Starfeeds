@@ -27,4 +27,30 @@ class UserPublic(BaseModel):
 
 class UserMe(UserPublic):
     email: EmailStr
+    phone: str | None = None
     created_at: datetime
+    notification_prefs: dict = {}
+
+
+class UserUpdate(BaseModel):
+    """Partial profile/account update — every field is optional."""
+
+    full_name: str | None = Field(default=None, min_length=1, max_length=120)
+    headline: str | None = Field(default=None, max_length=120)
+    bio: str | None = None
+    avatar_url: str | None = Field(default=None, max_length=500)
+    email: EmailStr | None = None
+    phone: str | None = Field(default=None, max_length=40)
+
+
+class NotificationPrefsUpdate(BaseModel):
+    """Notification / visibility preference toggles (all optional)."""
+
+    comments: bool | None = None
+    collab: bool | None = None
+    mentions: bool | None = None
+    announcements: bool | None = None
+    weekly: bool | None = None
+    important: bool | None = None
+    public_profile: bool | None = None
+    show_online: bool | None = None

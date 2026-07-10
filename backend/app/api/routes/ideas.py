@@ -3,8 +3,23 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, DbSession
-from app.models import Idea, SavedIdea, Upvote
-from app.schemas.idea import IdeaCreate, IdeaListResponse, IdeaOut
+from app.models import (
+    CollaborationRequest,
+    Comment,
+    Idea,
+    Notification,
+    SavedIdea,
+    Upvote,
+)
+from app.schemas.idea import (
+    CommentCreate,
+    CommentOut,
+    IdeaCreate,
+    IdeaListResponse,
+    IdeaOut,
+)
+from app.realtime import push_notification
+from app.schemas.social import CollaborationRequestOut
 
 router = APIRouter(prefix="/ideas", tags=["ideas"])
 
@@ -12,6 +27,9 @@ router = APIRouter(prefix="/ideas", tags=["ideas"])
 async def _serialize(db: DbSession, idea: Idea, viewer_id: int) -> IdeaOut:
     upvote_count = await db.scalar(
         select(func.count()).select_from(Upvote).where(Upvote.idea_id == idea.id)
+    )
+    comment_count = await db.scalar(
+        select(func.count()).select_from(Comment).where(Comment.idea_id == idea.id)
     )
     upvoted = await db.scalar(
         select(func.count())
@@ -25,6 +43,7 @@ async def _serialize(db: DbSession, idea: Idea, viewer_id: int) -> IdeaOut:
     )
     out = IdeaOut.model_validate(idea)
     out.upvote_count = upvote_count or 0
+    out.comment_count = comment_count or 0
     out.upvoted_by_me = bool(upvoted)
     out.saved_by_me = bool(saved)
     return out
@@ -39,11 +58,15 @@ async def list_ideas(
     category: str | None = None,
     sort: str = Query("recent", pattern="^(recent|top)$"),
     saved: bool = False,
+    author_id: int | None = None,
 ) -> IdeaListResponse:
     stmt = select(Idea).options(selectinload(Idea.author))
 
     if category:
         stmt = stmt.where(Idea.category == category)
+
+    if author_id is not None:
+        stmt = stmt.where(Idea.author_id == author_id)
 
     if saved:
         stmt = stmt.join(SavedIdea, SavedIdea.idea_id == Idea.id).where(
@@ -101,6 +124,32 @@ async def _get_idea_or_404(db: DbSession, idea_id: int) -> Idea:
     return idea
 
 
+def _notify(
+    db: DbSession,
+    *,
+    user_id: int,
+    actor_id: int,
+    type: str,
+    text: str,
+    idea_id: int | None = None,
+) -> Notification | None:
+    """Queue a notification (skips self-notifications). Caller commits.
+
+    Returns the queued Notification so the caller can broadcast it after commit.
+    """
+    if user_id == actor_id:
+        return None
+    notif = Notification(
+        user_id=user_id,
+        actor_id=actor_id,
+        type=type,
+        text=text,
+        idea_id=idea_id,
+    )
+    db.add(notif)
+    return notif
+
+
 @router.post("/{idea_id}/upvote", response_model=IdeaOut)
 async def toggle_upvote(
     idea_id: int, db: DbSession, current_user: CurrentUser
@@ -111,11 +160,23 @@ async def toggle_upvote(
             Upvote.idea_id == idea_id, Upvote.user_id == current_user.id
         )
     )
+    notif = None
     if existing:
         await db.execute(delete(Upvote).where(Upvote.id == existing.id))
     else:
         db.add(Upvote(idea_id=idea_id, user_id=current_user.id))
+        notif = _notify(
+            db,
+            user_id=idea.author_id,
+            actor_id=current_user.id,
+            type="upvote",
+            text=f'upvoted your idea "{idea.title}"',
+            idea_id=idea.id,
+        )
     await db.commit()
+    if notif is not None:
+        await db.refresh(notif)
+        await push_notification(idea.author_id, notif, current_user)
     return await _serialize(db, idea, current_user.id)
 
 
@@ -135,3 +196,98 @@ async def toggle_save(
         db.add(SavedIdea(idea_id=idea_id, user_id=current_user.id))
     await db.commit()
     return await _serialize(db, idea, current_user.id)
+
+
+@router.get("/{idea_id}/comments", response_model=list[CommentOut])
+async def list_comments(
+    idea_id: int, db: DbSession, current_user: CurrentUser
+) -> list[Comment]:
+    await _get_idea_or_404(db, idea_id)
+    comments = (
+        await db.scalars(
+            select(Comment)
+            .options(selectinload(Comment.author))
+            .where(Comment.idea_id == idea_id)
+            .order_by(Comment.created_at.asc())
+        )
+    ).all()
+    return list(comments)
+
+
+@router.post(
+    "/{idea_id}/comments",
+    response_model=CommentOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_comment(
+    idea_id: int, payload: CommentCreate, db: DbSession, current_user: CurrentUser
+) -> Comment:
+    idea = await _get_idea_or_404(db, idea_id)
+    comment = Comment(
+        body=payload.body, idea_id=idea_id, author_id=current_user.id
+    )
+    db.add(comment)
+    notif = _notify(
+        db,
+        user_id=idea.author_id,
+        actor_id=current_user.id,
+        type="comment",
+        text=f'commented on your idea "{idea.title}"',
+        idea_id=idea.id,
+    )
+    await db.commit()
+    await db.refresh(comment, attribute_names=["author"])
+    if notif is not None:
+        await db.refresh(notif)
+        await push_notification(idea.author_id, notif, current_user)
+    return comment
+
+
+@router.post(
+    "/{idea_id}/interest",
+    response_model=CollaborationRequestOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def express_interest(
+    idea_id: int, db: DbSession, current_user: CurrentUser
+) -> CollaborationRequest:
+    idea = await _get_idea_or_404(db, idea_id)
+    if idea.author_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot express interest in your own idea",
+        )
+
+    existing = await db.scalar(
+        select(CollaborationRequest).where(
+            CollaborationRequest.from_user_id == current_user.id,
+            CollaborationRequest.idea_id == idea_id,
+            CollaborationRequest.status == "pending",
+        )
+    )
+    if existing is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You already expressed interest in this idea",
+        )
+
+    req = CollaborationRequest(
+        from_user_id=current_user.id,
+        to_user_id=idea.author_id,
+        idea_id=idea_id,
+    )
+    db.add(req)
+    notif = _notify(
+        db,
+        user_id=idea.author_id,
+        actor_id=current_user.id,
+        type="collab",
+        text=f'expressed interest in your idea "{idea.title}"',
+        idea_id=idea.id,
+    )
+    await db.commit()
+    await db.refresh(req, attribute_names=["from_user", "to_user"])
+    if notif is not None:
+        await db.refresh(notif)
+        await push_notification(idea.author_id, notif, current_user)
+    return req

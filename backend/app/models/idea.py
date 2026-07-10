@@ -31,6 +31,9 @@ class Idea(Base, TimestampMixin):
     saves: Mapped[list["SavedIdea"]] = relationship(
         back_populates="idea", cascade="all, delete-orphan"
     )
+    comments: Mapped[list["Comment"]] = relationship(
+        back_populates="idea", cascade="all, delete-orphan"
+    )
 
 
 class Upvote(Base):
@@ -63,3 +66,19 @@ class SavedIdea(Base):
 
     user: Mapped["User"] = relationship(back_populates="saved")
     idea: Mapped["Idea"] = relationship(back_populates="saves")
+
+
+class Comment(Base, TimestampMixin):
+    __tablename__ = "comments"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    body: Mapped[str] = mapped_column(Text)
+    author_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    idea_id: Mapped[int] = mapped_column(
+        ForeignKey("ideas.id", ondelete="CASCADE"), index=True
+    )
+
+    author: Mapped["User"] = relationship(back_populates="comments")
+    idea: Mapped["Idea"] = relationship(back_populates="comments")

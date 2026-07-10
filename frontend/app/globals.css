@@ -1,26 +1,54 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * Design tokens ported from the Figma "Starfeeds Idea Bank" file.
+ * Tailwind v4 reads theme tokens from this @theme block — the legacy
+ * tailwind.config.ts is NOT auto-loaded in v4, so these must live here
+ * for utilities like `bg-primary-600` / `font-lato` to generate CSS.
+ */
+@theme {
+  --color-primary-50: #f9f5ff;
+  --color-primary-400: #c590fb;
+  --color-primary-500: #a25ee6;
+  --color-primary-600: #7e2bd1;
+  --color-primary-700: #4d0695;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-secondary-500: #ee46bc;
+  --color-secondary-700: #c11574;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-brand-50: #f9f5ff;
+  --color-brand-600: #7f56d9;
+
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e9eaeb;
+  --color-neutral-300: #d5d7da;
+  --color-neutral-400: #a4a7ae;
+  --color-neutral-500: #717680;
+  --color-neutral-600: #535862;
+  --color-neutral-700: #414651;
+  --color-neutral-900: #181d27;
+
+  --color-success-500: #12b76a;
+  --color-destructive-500: #f04438;
+
+  --font-lato: "Lato", sans-serif;
+  --font-inter: "Inter", sans-serif;
+
+  --text-sm: 14px;
+  --text-sm--line-height: 20px;
+  --text-base: 16px;
+  --text-base--line-height: 24px;
+  --text-lg: 18px;
+  --text-lg--line-height: 28px;
+  --text-xl: 20px;
+  --text-xl--line-height: 30px;
+
+  --shadow-xs: 0 1px 2px 0 rgba(10, 13, 18, 0.05);
+  --shadow-sm: 0 1px 2px 0 rgba(10, 13, 18, 0.09), 0 1px 3px 0 rgba(10, 13, 18, 0.1);
+  --shadow-md: 0 20px 50px -20px rgba(127, 89, 248, 0.15);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-lato);
+  color: var(--color-neutral-900);
 }

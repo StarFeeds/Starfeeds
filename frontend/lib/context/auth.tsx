@@ -22,13 +22,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const me = await api.auth.me();
       setUser(me);
-    } catch {
+      return;
+    } catch (err) {
       setUser(null);
     }
   };
 
   useEffect(() => {
-    refetchUser().finally(() => setIsLoading(false));
+    const initAuth = async () => {
+      try {
+        await refetchUser();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    initAuth();
   }, []);
 
   const logout = () => {

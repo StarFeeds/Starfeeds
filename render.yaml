@@ -1,0 +1,38 @@
+# Render blueprint for the StarFeeds backend + Postgres.
+# Deploy the FRONTEND on Vercel (see DEPLOY.md) — this file is the API + DB only.
+#
+# Usage: push to GitHub, then Render -> New -> Blueprint -> pick this repo.
+databases:
+  - name: starfeeds-db
+    databaseName: starfeeds
+    user: starfeeds
+    plan: free # bump to "basic-256mb"/"standard" for real traffic
+
+services:
+  - type: web
+    name: starfeeds-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter # "free" spins down after 15min idle (drops WebSockets); "starter" stays warm
+    region: oregon
+    # IMPORTANT: realtime uses an in-process connection registry — keep ONE instance.
+    numInstances: 1
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: starfeeds-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true # Render generates a strong random value
+      - key: ENVIRONMENT
+        value: production
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: "7"
+      # Set to your deployed frontend origin(s), comma-separated, after the Vercel deploy.
+      # e.g. https://starfeeds.vercel.app
+      - key: CORS_ORIGINS
+        sync: false

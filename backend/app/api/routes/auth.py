@@ -11,7 +11,12 @@ from app.core.security import (
 )
 from app.models import User
 from app.schemas.auth import LoginRequest, RefreshRequest, TokenPair
-from app.schemas.user import UserCreate, UserMe
+from app.schemas.user import (
+    NotificationPrefsUpdate,
+    UserCreate,
+    UserMe,
+    UserUpdate,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -78,4 +83,45 @@ async def refresh(payload: RefreshRequest, db: DbSession) -> TokenPair:
 
 @router.get("/me", response_model=UserMe)
 async def me(current_user: CurrentUser) -> User:
+    return current_user
+
+
+@router.patch("/me", response_model=UserMe)
+async def update_me(
+    payload: UserUpdate, db: DbSession, current_user: CurrentUser
+) -> User:
+    data = payload.model_dump(exclude_unset=True)
+
+    new_email = data.get("email")
+    if new_email and new_email != current_user.email:
+        clash = await db.scalar(select(User).where(User.email == new_email))
+        if clash is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="That email is already in use",
+            )
+
+    for field, value in data.items():
+        setattr(current_user, field, value)
+
+    await db.commit()
+    await db.refresh(current_user)
+    return current_user
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_me(db: DbSession, current_user: CurrentUser) -> None:
+    await db.delete(current_user)
+    await db.commit()
+
+
+@router.patch("/me/notification-prefs", response_model=UserMe)
+async def update_notification_prefs(
+    payload: NotificationPrefsUpdate, db: DbSession, current_user: CurrentUser
+) -> User:
+    prefs = dict(current_user.notification_prefs or {})
+    prefs.update(payload.model_dump(exclude_unset=True))
+    current_user.notification_prefs = prefs
+    await db.commit()
+    await db.refresh(current_user)
     return current_user
