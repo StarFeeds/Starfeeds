@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from sqlalchemy import or_, select
 
 from app.api.deps import CurrentUser, DbSession
@@ -9,6 +9,7 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
+from app.email import send_welcome_email
 from app.models import User
 from app.schemas.auth import LoginRequest, RefreshRequest, TokenPair
 from app.schemas.user import (
@@ -29,7 +30,9 @@ def _tokens_for(user: User) -> TokenPair:
 
 
 @router.post("/register", response_model=TokenPair, status_code=status.HTTP_201_CREATED)
-async def register(payload: UserCreate, db: DbSession) -> TokenPair:
+async def register(
+    payload: UserCreate, db: DbSession, background_tasks: BackgroundTasks
+) -> TokenPair:
     existing = await db.scalar(
         select(User).where(
             or_(User.email == payload.email, User.username == payload.username)
@@ -50,6 +53,11 @@ async def register(payload: UserCreate, db: DbSession) -> TokenPair:
     db.add(user)
     await db.commit()
     await db.refresh(user)
+
+    # Fire the welcome email after the response is sent. Failures are logged
+    # inside send_welcome_email and never affect signup.
+    background_tasks.add_task(send_welcome_email, user.email, user.full_name)
+
     return _tokens_for(user)
 
 

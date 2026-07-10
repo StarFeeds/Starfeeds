@@ -29,6 +29,27 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: str = "http://localhost:3000"
 
+    # Public URL of the frontend (used for links in emails).
+    FRONTEND_URL: str = "http://localhost:3000"
+
+    # Email / SMTP. Leave SMTP_HOST unset to disable email — sends become a
+    # logged no-op, so signup still works without any email provider configured.
+    SMTP_HOST: str | None = None
+    SMTP_PORT: int = 587
+    SMTP_USER: str | None = None
+    SMTP_PASSWORD: str | None = None
+    SMTP_STARTTLS: bool = True
+    EMAIL_FROM: str | None = None
+    EMAIL_FROM_NAME: str = "StarFeeds"
+
+    @property
+    def email_enabled(self) -> bool:
+        return bool(self.SMTP_HOST and self.SMTP_USER and self.SMTP_PASSWORD)
+
+    @property
+    def email_from_address(self) -> str:
+        return self.EMAIL_FROM or self.SMTP_USER or "no-reply@starfeeds.app"
+
     @field_validator("DATABASE_URL", mode="after")
     @classmethod
     def _normalize_db_url(cls, v: str) -> str:

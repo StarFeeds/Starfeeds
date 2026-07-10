@@ -84,7 +84,29 @@ By default Render and Vercel **auto-deploy on every push**, independent of CI. T
 - **Branch protection (simplest):** in GitHub → Settings → Branches, require the `Backend tests` and `Frontend build` checks to pass before merging to `main`. Deploy from `main`. Bad code can't merge, so it can't deploy.
 - **Deploy hooks:** turn OFF auto-deploy in Render & Vercel, then add repo secrets `RENDER_DEPLOY_HOOK_URL` and `VERCEL_DEPLOY_HOOK_URL` (both have "Deploy Hook" URLs in their dashboards). The CI `deploy` job fires them only after tests pass. If the secrets aren't set, the job no-ops.
 
-## 7. Known limitations (not deploy blockers)
+## 7. Email (welcome email on signup)
+
+A welcome email is sent in the background after registration. It's **optional** —
+if SMTP isn't configured the send is skipped (signup still works). Works with any
+SMTP provider.
+
+Set these env vars on the API service to enable it:
+
+| Var | Example |
+|-----|---------|
+| `SMTP_HOST` | `smtp.resend.com` (Resend) or `smtp.gmail.com` (Gmail) |
+| `SMTP_PORT` | `587` (STARTTLS) or `465` (implicit TLS) |
+| `SMTP_USER` | `resend` (Resend) or your Gmail address |
+| `SMTP_PASSWORD` | Resend API key, or a Gmail **App Password** |
+| `EMAIL_FROM` | `no-reply@yourdomain.com` |
+| `EMAIL_FROM_NAME` | `StarFeeds` |
+| `FRONTEND_URL` | `https://your-frontend.vercel.app` (used for the button link) |
+
+Provider notes
+- **Resend** (recommended): 3,000 emails/mo free. Requires a **verified sending domain** to email arbitrary users; until then you can only send to your own account email. `SMTP_USER=resend`, `SMTP_PASSWORD=<api key>`.
+- **Gmail**: no domain needed. Enable 2FA, create an **App Password**, use it as `SMTP_PASSWORD`. ~500/day limit; fine for early MVP.
+
+## 8. Known limitations (not deploy blockers)
 
 - Single API instance only (in-memory realtime). Scale-out needs Redis pub/sub.
 - No public-profile page, password-reset email, or real OAuth yet (UI placeholders).
