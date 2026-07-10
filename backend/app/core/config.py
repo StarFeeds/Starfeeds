@@ -32,8 +32,12 @@ class Settings(BaseSettings):
     # Public URL of the frontend (used for links in emails).
     FRONTEND_URL: str = "http://localhost:3000"
 
-    # Email / SMTP. Leave SMTP_HOST unset to disable email — sends become a
-    # logged no-op, so signup still works without any email provider configured.
+    # Email. Two backends supported:
+    #  - SendGrid over HTTPS (works on hosts that block outbound SMTP, e.g. Render)
+    #  - SMTP (good for local dev)
+    # If neither is configured, sends are a logged no-op so signup still works.
+    # SendGrid takes precedence when SENDGRID_API_KEY is set.
+    SENDGRID_API_KEY: str | None = None
     SMTP_HOST: str | None = None
     SMTP_PORT: int = 587
     SMTP_USER: str | None = None
@@ -43,8 +47,12 @@ class Settings(BaseSettings):
     EMAIL_FROM_NAME: str = "StarFeeds"
 
     @property
-    def email_enabled(self) -> bool:
+    def smtp_configured(self) -> bool:
         return bool(self.SMTP_HOST and self.SMTP_USER and self.SMTP_PASSWORD)
+
+    @property
+    def email_enabled(self) -> bool:
+        return bool(self.SENDGRID_API_KEY) or self.smtp_configured
 
     @property
     def email_from_address(self) -> str:

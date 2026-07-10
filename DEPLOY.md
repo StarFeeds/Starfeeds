@@ -90,21 +90,28 @@ A welcome email is sent in the background after registration. It's **optional** 
 if SMTP isn't configured the send is skipped (signup still works). Works with any
 SMTP provider.
 
-Set these env vars on the API service to enable it:
+> ⚠️ **Render (and many PaaS) block outbound SMTP** (ports 25/465/587). So on Render
+> you must use the **SendGrid HTTPS** backend — plain SMTP (incl. Gmail) will time out.
 
-| Var | Example |
-|-----|---------|
-| `SMTP_HOST` | `smtp.resend.com` (Resend) or `smtp.gmail.com` (Gmail) |
-| `SMTP_PORT` | `587` (STARTTLS) or `465` (implicit TLS) |
-| `SMTP_USER` | `resend` (Resend) or your Gmail address |
-| `SMTP_PASSWORD` | Resend API key, or a Gmail **App Password** |
-| `EMAIL_FROM` | `no-reply@yourdomain.com` |
+### SendGrid over HTTPS (recommended for Render, no domain required)
+1. Create a free SendGrid account (100 emails/day free).
+2. **Verify a single sender:** Settings → Sender Authentication → **Single Sender Verification** → add e.g. `starfeeds.tech@gmail.com` and confirm via the email SendGrid sends you. (No domain needed.)
+3. Create an **API key:** Settings → API Keys → Create (Restricted, "Mail Send" permission is enough).
+4. Set env vars on the API service:
+
+| Var | Value |
+|-----|-------|
+| `SENDGRID_API_KEY` | `SG.xxxxx` |
+| `EMAIL_FROM` | the **verified single-sender** email (e.g. `starfeeds.tech@gmail.com`) |
 | `EMAIL_FROM_NAME` | `StarFeeds` |
-| `FRONTEND_URL` | `https://your-frontend.vercel.app` (used for the button link) |
+| `FRONTEND_URL` | `https://your-frontend.vercel.app` (button link) |
 
-Provider notes
-- **Resend** (recommended): 3,000 emails/mo free. Requires a **verified sending domain** to email arbitrary users; until then you can only send to your own account email. `SMTP_USER=resend`, `SMTP_PASSWORD=<api key>`.
-- **Gmail**: no domain needed. Enable 2FA, create an **App Password**, use it as `SMTP_PASSWORD`. ~500/day limit; fine for early MVP.
+### SMTP (local dev only — blocked on Render)
+`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`. Works from a normal network
+(e.g. Gmail with an App Password) but times out on Render.
+
+The code prefers SendGrid whenever `SENDGRID_API_KEY` is set; otherwise it uses SMTP.
+Later, moving to Resend (or a verified domain in SendGrid) improves deliverability.
 
 ## 8. Known limitations (not deploy blockers)
 

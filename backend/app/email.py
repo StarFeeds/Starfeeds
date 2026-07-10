@@ -1,6 +1,9 @@
-"""Transactional email via SMTP (works with Resend, Gmail, SendGrid, etc.).
+"""Transactional email.
 
-Sends are best-effort: if SMTP isn't configured, or a send fails, we log and
+Two backends: SendGrid over HTTPS (survives hosts that block outbound SMTP,
+e.g. Render) and SMTP (handy locally). SendGrid wins when its API key is set.
+
+Sends are best-effort: if nothing is configured, or a send fails, we log and
 return without raising — the caller (e.g. signup) must never fail on email.
 """
 
@@ -10,18 +13,42 @@ import logging
 from email.message import EmailMessage
 
 import aiosmtplib
+import httpx
 
 from app.core.config import settings
 
 logger = logging.getLogger("app.email")
 
+SENDGRID_ENDPOINT = "https://api.sendgrid.com/v3/mail/send"
 
-async def send_email(to: str, subject: str, html: str, text: str) -> bool:
-    """Send one email. Returns True if sent, False if skipped/failed."""
-    if not settings.email_enabled:
-        logger.info("Email disabled (SMTP not configured); skipping '%s' to %s", subject, to)
-        return False
 
+async def _send_via_sendgrid(to: str, subject: str, html: str, text: str) -> bool:
+    payload = {
+        "personalizations": [{"to": [{"email": to}]}],
+        "from": {"email": settings.email_from_address, "name": settings.EMAIL_FROM_NAME},
+        "subject": subject,
+        "content": [
+            {"type": "text/plain", "value": text},
+            {"type": "text/html", "value": html},
+        ],
+    }
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.post(
+            SENDGRID_ENDPOINT,
+            headers={"Authorization": f"Bearer {settings.SENDGRID_API_KEY}"},
+            json=payload,
+        )
+    if resp.status_code in (200, 202):
+        logger.info("Sent '%s' email to %s via SendGrid", subject, to)
+        return True
+    logger.error(
+        "SendGrid send failed (%s) for '%s' to %s: %s",
+        resp.status_code, subject, to, resp.text[:300],
+    )
+    return False
+
+
+async def _send_via_smtp(to: str, subject: str, html: str, text: str) -> bool:
     msg = EmailMessage()
     msg["From"] = f"{settings.EMAIL_FROM_NAME} <{settings.email_from_address}>"
     msg["To"] = to
@@ -30,19 +57,29 @@ async def send_email(to: str, subject: str, html: str, text: str) -> bool:
     msg.add_alternative(html, subtype="html")
 
     implicit_tls = settings.SMTP_PORT == 465
+    await aiosmtplib.send(
+        msg,
+        hostname=settings.SMTP_HOST,
+        port=settings.SMTP_PORT,
+        username=settings.SMTP_USER,
+        password=settings.SMTP_PASSWORD,
+        use_tls=implicit_tls,
+        start_tls=(not implicit_tls) and settings.SMTP_STARTTLS,
+        timeout=15,
+    )
+    logger.info("Sent '%s' email to %s via SMTP", subject, to)
+    return True
+
+
+async def send_email(to: str, subject: str, html: str, text: str) -> bool:
+    """Send one email. Returns True if sent, False if skipped/failed."""
+    if not settings.email_enabled:
+        logger.info("Email disabled (no provider configured); skipping '%s' to %s", subject, to)
+        return False
     try:
-        await aiosmtplib.send(
-            msg,
-            hostname=settings.SMTP_HOST,
-            port=settings.SMTP_PORT,
-            username=settings.SMTP_USER,
-            password=settings.SMTP_PASSWORD,
-            use_tls=implicit_tls,
-            start_tls=(not implicit_tls) and settings.SMTP_STARTTLS,
-            timeout=15,
-        )
-        logger.info("Sent '%s' email to %s", subject, to)
-        return True
+        if settings.SENDGRID_API_KEY:
+            return await _send_via_sendgrid(to, subject, html, text)
+        return await _send_via_smtp(to, subject, html, text)
     except Exception:
         logger.exception("Failed to send '%s' email to %s", subject, to)
         return False
