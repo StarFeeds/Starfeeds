@@ -29,6 +29,9 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: str = "http://localhost:3000"
 
+    # Comma-separated emails auto-granted admin on login/signup.
+    ADMIN_EMAILS: str = ""
+
     # Public URL of the frontend (used for links in emails).
     FRONTEND_URL: str = "http://localhost:3000"
 
@@ -88,6 +91,10 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
+    @property
+    def admin_emails_list(self) -> list[str]:
+        return [e.strip().lower() for e in self.ADMIN_EMAILS.split(",") if e.strip()]
 
     @model_validator(mode="after")
     def _guard_production(self) -> "Settings":

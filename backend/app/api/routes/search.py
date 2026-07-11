@@ -25,11 +25,12 @@ async def search(
             select(Idea)
             .options(selectinload(Idea.author))
             .where(
+                Idea.hidden.is_(False),
                 or_(
                     Idea.title.ilike(term),
                     Idea.body.ilike(term),
                     Idea.category.ilike(term),
-                )
+                ),
             )
             .order_by(Idea.created_at.desc())
             .limit(limit)

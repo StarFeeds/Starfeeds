@@ -11,6 +11,11 @@ import {
   UserUpdate,
   NotificationPrefs,
   SearchResults,
+  AdminStats,
+  AdminUser,
+  AdminUserList,
+  AdminIdea,
+  AdminIdeaList,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -349,5 +354,57 @@ export const api = {
   search: async (q: string, limit = 8): Promise<SearchResults> => {
     const params = new URLSearchParams({ q, limit: String(limit) });
     return apiCall<SearchResults>(`/search?${params}`, { requiresAuth: true });
+  },
+
+  admin: {
+    stats: async (): Promise<AdminStats> =>
+      apiCall<AdminStats>("/admin/stats", { requiresAuth: true }),
+
+    listUsers: async (q = "", page = 1, pageSize = 20): Promise<AdminUserList> => {
+      const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+      if (q) params.append("q", q);
+      return apiCall<AdminUserList>(`/admin/users?${params}`, { requiresAuth: true });
+    },
+    updateUser: async (
+      id: number,
+      data: { is_admin?: boolean; is_active?: boolean }
+    ): Promise<AdminUser> =>
+      apiCall<AdminUser>(`/admin/users/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+        requiresAuth: true,
+      }),
+    deleteUser: async (id: number): Promise<void> => {
+      await apiCall<void>(`/admin/users/${id}`, { method: "DELETE", requiresAuth: true });
+    },
+
+    listIdeas: async (
+      q = "",
+      opts?: { hidden?: boolean; page?: number; pageSize?: number }
+    ): Promise<AdminIdeaList> => {
+      const params = new URLSearchParams({
+        page: String(opts?.page ?? 1),
+        page_size: String(opts?.pageSize ?? 20),
+      });
+      if (q) params.append("q", q);
+      if (opts?.hidden != null) params.append("hidden", String(opts.hidden));
+      return apiCall<AdminIdeaList>(`/admin/ideas?${params}`, { requiresAuth: true });
+    },
+    setIdeaHidden: async (id: number, hidden: boolean): Promise<AdminIdea> =>
+      apiCall<AdminIdea>(`/admin/ideas/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ hidden }),
+        requiresAuth: true,
+      }),
+    deleteIdea: async (id: number): Promise<void> => {
+      await apiCall<void>(`/admin/ideas/${id}`, { method: "DELETE", requiresAuth: true });
+    },
+
+    announce: async (text: string): Promise<{ delivered: number }> =>
+      apiCall<{ delivered: number }>("/admin/announcements", {
+        method: "POST",
+        body: JSON.stringify({ text }),
+        requiresAuth: true,
+      }),
   },
 };

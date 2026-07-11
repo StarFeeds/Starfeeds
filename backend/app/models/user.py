@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlalchemy as sa
 from sqlalchemy import JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -32,6 +33,8 @@ class User(Base, TimestampMixin):
     avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
     is_online: Mapped[bool] = mapped_column(default=False)
+    is_admin: Mapped[bool] = mapped_column(default=False, server_default=sa.false())
+    is_active: Mapped[bool] = mapped_column(default=True, server_default=sa.true())
 
     notification_prefs: Mapped[dict] = mapped_column(
         JSON, default=lambda: dict(DEFAULT_NOTIFICATION_PREFS)

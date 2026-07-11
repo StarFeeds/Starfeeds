@@ -2,6 +2,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from sqlalchemy import or_, select
 
 from app.api.deps import CurrentUser, DbSession
+from app.core.config import settings
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -50,6 +51,7 @@ async def register(
         phone=payload.phone,
         hashed_password=hash_password(payload.password),
         is_online=True,
+        is_admin=payload.email.lower() in settings.admin_emails_list,
     )
     db.add(user)
     await db.commit()
@@ -70,7 +72,15 @@ async def login(payload: LoginRequest, db: DbSession) -> TokenPair:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account has been suspended.",
+        )
     user.is_online = True
+    # Keep admin status in sync with the ADMIN_EMAILS allowlist (bootstrap admins).
+    if user.email.lower() in settings.admin_emails_list:
+        user.is_admin = True
     await db.commit()
     return _tokens_for(user)
 

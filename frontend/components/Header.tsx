@@ -100,17 +100,29 @@ function Badge({ count }: { count: number }) {
   );
 }
 
+const adminNav: NavItem = {
+  href: "/admin",
+  label: "Admin",
+  icon: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+    </svg>
+  ),
+};
+
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { unreadMessages, unreadNotifications } = useRealtime();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const counts: Record<BadgeKey, number> = {
     messages: unreadMessages,
     notifications: unreadNotifications,
   };
+  const menuItems = user?.is_admin ? [...menuOnlyNav, adminNav] : menuOnlyNav;
+  const desktopNav = user?.is_admin ? [...primaryNav, adminNav] : primaryNav;
 
   const handleLogout = () => {
     setMenuOpen(false);
@@ -131,7 +143,7 @@ export function Header() {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-7 flex-shrink-0">
-          {primaryNav.map((item) => {
+          {desktopNav.map((item) => {
             const active = pathname === item.href;
             const count = item.badgeKey ? counts[item.badgeKey] : 0;
             return (
@@ -178,7 +190,7 @@ export function Header() {
             onClick={() => setMenuOpen(false)}
           />
           <nav className="md:hidden absolute left-0 right-0 top-16 bg-white border-b border-neutral-200 shadow-lg z-50 p-2">
-            {[...primaryNav, ...menuOnlyNav].map((item) => {
+            {[...primaryNav, ...menuItems].map((item) => {
               const active = pathname === item.href;
               const count = item.badgeKey ? counts[item.badgeKey] : 0;
               return (

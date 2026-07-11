@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import sqlalchemy as sa
 from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,6 +20,8 @@ class Idea(Base, TimestampMixin):
     body: Mapped[str] = mapped_column(Text)
     category: Mapped[str] = mapped_column(String(80), default="General", index=True)
     visibility: Mapped[str] = mapped_column(String(20), default="public")
+    # Admin-moderation: hidden ideas are excluded from public feed & search.
+    hidden: Mapped[bool] = mapped_column(default=False, server_default=sa.false())
 
     author_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True

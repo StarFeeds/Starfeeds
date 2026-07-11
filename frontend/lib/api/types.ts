@@ -21,6 +21,8 @@ export interface User {
   is_online: boolean;
   created_at: string;
   notification_prefs?: Partial<NotificationPrefs>;
+  is_admin?: boolean;
+  is_active?: boolean;
 }
 
 /** Public subset of a user (author, actor, conversation partner). */
@@ -103,6 +105,64 @@ export interface Idea {
   comment_count: number;
   saved_by_me: boolean;
   upvoted_by_me: boolean;
+  hidden?: boolean;
+}
+
+export interface AdminStats {
+  users_total: number;
+  users_active: number;
+  users_admin: number;
+  ideas_total: number;
+  ideas_hidden: number;
+  comments_total: number;
+  collab_pending: number;
+  conversations_total: number;
+  messages_total: number;
+  signups_today: number;
+  signups_7d: number;
+  signups_30d: number;
+  signups_by_day: { date: string; count: number }[];
+  top_ideas: { id: number; title: string; upvotes: number }[];
+}
+
+export interface AdminUser {
+  id: number;
+  email: string;
+  username: string;
+  full_name: string;
+  headline: string;
+  phone: string | null;
+  avatar_url: string | null;
+  is_admin: boolean;
+  is_active: boolean;
+  is_online: boolean;
+  created_at: string;
+  idea_count: number;
+}
+
+export interface AdminUserList {
+  items: AdminUser[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface AdminIdea {
+  id: number;
+  title: string;
+  category: string;
+  hidden: boolean;
+  created_at: string;
+  author: PublicUser;
+  upvote_count: number;
+  comment_count: number;
+}
+
+export interface AdminIdeaList {
+  items: AdminIdea[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
 export interface IdeaListResponse {

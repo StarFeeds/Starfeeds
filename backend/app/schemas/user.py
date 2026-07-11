@@ -32,6 +32,8 @@ class UserMe(UserPublic):
     phone: str | None = None
     created_at: datetime
     notification_prefs: dict = {}
+    is_admin: bool = False
+    is_active: bool = True
 
 
 class UserUpdate(BaseModel):

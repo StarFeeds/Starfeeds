@@ -60,7 +60,7 @@ async def list_ideas(
     saved: bool = False,
     author_id: int | None = None,
 ) -> IdeaListResponse:
-    stmt = select(Idea).options(selectinload(Idea.author))
+    stmt = select(Idea).options(selectinload(Idea.author)).where(Idea.hidden.is_(False))
 
     if category:
         stmt = stmt.where(Idea.category == category)
