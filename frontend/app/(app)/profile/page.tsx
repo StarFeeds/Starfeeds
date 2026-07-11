@@ -66,7 +66,7 @@ export default function ProfilePage() {
   const noop = async () => {};
 
   const sidebar = (
-    <aside className="hidden md:flex flex-col gap-4 w-72 flex-shrink-0">
+    <aside className="flex flex-col gap-4 w-full md:w-72 flex-shrink-0">
       {/* Profile card */}
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-xs p-5">
         <div className="flex items-center gap-3">

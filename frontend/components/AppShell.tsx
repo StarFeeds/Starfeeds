@@ -26,7 +26,7 @@ export function AppShell({
 
       <div className="relative z-10">
         <Header />
-        <div className="max-w-5xl mx-auto px-4 py-6 flex gap-6 items-start">
+        <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col md:flex-row gap-4 md:gap-6 md:items-start">
           {sidebar ?? <Sidebar />}
           <main className="flex-1 min-w-0 space-y-4">{children}</main>
         </div>

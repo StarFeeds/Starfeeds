@@ -168,8 +168,10 @@ export default function MessagesPage() {
     <div className="min-h-screen bg-neutral-100">
       <Header />
       <div className="max-w-6xl mx-auto px-4 py-6 flex gap-4 items-stretch h-[calc(100vh-64px)]">
-        {/* Left: people + collab requests */}
-        <div className="hidden md:flex flex-col gap-4 w-80 flex-shrink-0 overflow-y-auto">
+        {/* Left: people + collab requests. On mobile, hidden once a chat is open. */}
+        <div
+          className={`${activeId ? "hidden md:flex" : "flex"} flex-col gap-4 w-full md:w-80 flex-shrink-0 overflow-y-auto`}
+        >
           <div className="bg-white rounded-2xl border border-neutral-200 shadow-xs p-4">
             <h2 className="font-bold text-neutral-900 mb-3">People</h2>
             {loading ? (
@@ -249,12 +251,23 @@ export default function MessagesPage() {
           )}
         </div>
 
-        {/* Right: chat */}
-        <div className="flex-1 min-w-0 bg-white rounded-2xl border border-neutral-200 shadow-xs flex flex-col">
+        {/* Right: chat. On mobile, only shown once a conversation is open. */}
+        <div
+          className={`${activeId ? "flex" : "hidden md:flex"} flex-1 min-w-0 bg-white rounded-2xl border border-neutral-200 shadow-xs flex-col`}
+        >
           {active ? (
             <>
               <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-200">
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setActiveId(null)}
+                    className="md:hidden -ml-1 p-1 text-neutral-600 hover:text-neutral-900 flex-shrink-0"
+                    aria-label="Back to conversations"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
                   <Avatar name={active.other_user.full_name} size={44} />
                   <div>
                     <p className="font-bold text-neutral-900 leading-tight">
