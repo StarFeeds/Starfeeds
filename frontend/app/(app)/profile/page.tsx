@@ -162,7 +162,13 @@ export default function ProfilePage() {
         ) : (
           <div className="space-y-4">
             {ideas.map((idea) => (
-              <IdeaCard key={idea.id} idea={idea} onUpvote={noop} onSave={noop} />
+              <IdeaCard
+                key={idea.id}
+                idea={idea}
+                onUpvote={noop}
+                onSave={noop}
+                onDelete={(id) => setIdeas((prev) => prev.filter((i) => i.id !== id))}
+              />
             ))}
           </div>
         ))}

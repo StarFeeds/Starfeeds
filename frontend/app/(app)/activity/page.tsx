@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { api } from "@/lib/api/client";
-import { Notification } from "@/lib/api/types";
+import { CollaborationRequest, Notification } from "@/lib/api/types";
 
 const TABS = [
   { label: "All", key: "all" },
@@ -17,7 +17,7 @@ const EMPTY_COPY: Record<TabKey, string> = {
   all: "Your activity — ratings, comments and collaboration requests — will show up here.",
   ratings: "Ratings on your ideas will appear here.",
   comments: "Comments on your ideas will appear here.",
-  collab: "Collaboration requests will appear here.",
+  collab: "No pending collaboration requests.",
 };
 
 function timeAgo(iso: string): string {
@@ -30,20 +30,39 @@ function timeAgo(iso: string): string {
   return `${Math.floor(s / 86400)} days ago`;
 }
 
+function Avatar({ name }: { name: string }) {
+  return (
+    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-secondary-500 flex items-center justify-center flex-shrink-0">
+      <span className="text-white text-sm font-bold">{(name ?? "S")[0]}</span>
+    </div>
+  );
+}
+
 export default function ActivityPage() {
   const [tab, setTab] = useState<TabKey>("all");
   const [items, setItems] = useState<Notification[]>([]);
+  const [requests, setRequests] = useState<CollaborationRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setNotice(null);
     (async () => {
       try {
-        const data = await api.activity.list(tab);
-        if (!cancelled) setItems(data);
+        if (tab === "collab") {
+          const reqs = await api.collaboration.list("incoming");
+          if (!cancelled) setRequests(reqs.filter((r) => r.status === "pending"));
+        } else {
+          const data = await api.activity.list(tab);
+          if (!cancelled) setItems(data);
+        }
       } catch {
-        if (!cancelled) setItems([]);
+        if (!cancelled) {
+          setItems([]);
+          setRequests([]);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -52,6 +71,30 @@ export default function ActivityPage() {
       cancelled = true;
     };
   }, [tab]);
+
+  const resolve = async (id: number, accept: boolean) => {
+    setRequests((prev) => prev.filter((r) => r.id !== id)); // optimistic
+    setNotice(
+      accept
+        ? "Request accepted — a conversation was started. Open Messages to chat."
+        : "Request declined."
+    );
+    try {
+      if (accept) await api.collaboration.accept(id);
+      else await api.collaboration.decline(id);
+    } catch {
+      // On failure, reload the list so the card reappears.
+      try {
+        const reqs = await api.collaboration.list("incoming");
+        setRequests(reqs.filter((r) => r.status === "pending"));
+        setNotice("Something went wrong — please try again.");
+      } catch {
+        /* ignore */
+      }
+    }
+  };
+
+  const isEmpty = tab === "collab" ? requests.length === 0 : items.length === 0;
 
   return (
     <AppShell>
@@ -73,9 +116,15 @@ export default function ActivityPage() {
         </div>
       </div>
 
+      {notice && (
+        <div className="p-3 bg-primary-50 border border-primary-200 rounded-xl">
+          <p className="text-sm text-primary-700">{notice}</p>
+        </div>
+      )}
+
       {loading ? (
         <div className="text-center py-12 text-neutral-600">Loading...</div>
-      ) : items.length === 0 ? (
+      ) : isEmpty ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-neutral-200">
           <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary-50 flex items-center justify-center">
             <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -84,15 +133,43 @@ export default function ActivityPage() {
           </div>
           <p className="text-sm text-neutral-600 max-w-sm mx-auto">{EMPTY_COPY[tab]}</p>
         </div>
+      ) : tab === "collab" ? (
+        <div className="bg-white rounded-2xl border border-neutral-200 shadow-xs divide-y divide-neutral-100">
+          {requests.map((r) => (
+            <div key={r.id} className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <Avatar name={r.from_user.full_name} />
+                <div className="min-w-0">
+                  <p className="text-sm text-neutral-900">
+                    <span className="font-semibold">{r.from_user.full_name}</span> wants to collaborate
+                  </p>
+                  <p className="text-xs text-neutral-500">
+                    {r.from_user.headline} · {timeAgo(r.created_at)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <button
+                  onClick={() => resolve(r.id, true)}
+                  className="px-5 h-9 bg-success-500 hover:opacity-90 text-white text-sm font-semibold rounded-full transition"
+                >
+                  Accept
+                </button>
+                <button
+                  onClick={() => resolve(r.id, false)}
+                  className="px-5 h-9 border border-destructive-500 text-destructive-500 hover:bg-destructive-500/5 text-sm font-semibold rounded-full transition"
+                >
+                  Decline
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="bg-white rounded-2xl border border-neutral-200 shadow-xs divide-y divide-neutral-100">
           {items.map((n) => (
             <div key={n.id} className="flex items-start gap-3 px-5 py-4">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-secondary-500 flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-sm font-bold">
-                  {(n.actor?.full_name ?? "S")[0]}
-                </span>
-              </div>
+              <Avatar name={n.actor?.full_name ?? "S"} />
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-neutral-700">
                   {n.actor && (
