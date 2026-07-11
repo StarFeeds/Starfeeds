@@ -11,6 +11,8 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str = Field(min_length=8, max_length=128)
+    # WhatsApp / contact number (optional at signup).
+    phone: str | None = Field(default=None, max_length=40)
 
 
 class UserPublic(BaseModel):

@@ -34,6 +34,7 @@ export default function RegisterPage() {
   const [accountType, setAccountType] = useState<AccountType>("Investor");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -55,7 +56,7 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      await api.auth.register(email, deriveUsername(email), fullName, password);
+      await api.auth.register(email, deriveUsername(email), fullName, password, whatsapp.trim() || undefined);
       await refetchUser();
       router.push("/home");
     } catch (err) {
@@ -140,6 +141,20 @@ export default function RegisterPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email address"
+                    className="w-full px-4 h-11 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-neutral-700 mb-1.5">
+                    WhatsApp number
+                  </label>
+                  <input
+                    type="tel"
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
+                    placeholder="e.g. +234 801 234 5678"
                     className="w-full px-4 h-11 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
                     required
                   />

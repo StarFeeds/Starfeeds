@@ -47,6 +47,7 @@ async def register(
         email=payload.email,
         username=payload.username,
         full_name=payload.full_name,
+        phone=payload.phone,
         hashed_password=hash_password(payload.password),
         is_online=True,
     )

@@ -149,10 +149,10 @@ async function apiCall<T>(
 
 export const api = {
   auth: {
-    register: async (email: string, username: string, fullName: string, password: string): Promise<TokenPair> => {
+    register: async (email: string, username: string, fullName: string, password: string, phone?: string): Promise<TokenPair> => {
       const tokens = await apiCall<TokenPair>("/auth/register", {
         method: "POST",
-        body: JSON.stringify({ email, username, full_name: fullName, password }),
+        body: JSON.stringify({ email, username, full_name: fullName, password, phone: phone || null }),
       });
       setStoredTokens({ access: tokens.access_token, refresh: tokens.refresh_token });
       return tokens;
