@@ -263,6 +263,10 @@ export const api = {
         requiresAuth: true,
       });
     },
+
+    remove: async (ideaId: number): Promise<void> => {
+      await apiCall<void>(`/ideas/${ideaId}`, { method: "DELETE", requiresAuth: true });
+    },
   },
 
   notifications: {

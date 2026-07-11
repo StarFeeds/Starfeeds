@@ -124,6 +124,21 @@ async def _get_idea_or_404(db: DbSession, idea_id: int) -> Idea:
     return idea
 
 
+@router.delete("/{idea_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_idea(
+    idea_id: int, db: DbSession, current_user: CurrentUser
+) -> None:
+    idea = await _get_idea_or_404(db, idea_id)
+    if idea.author_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only delete your own ideas",
+        )
+    # Related upvotes/saves/comments/notifications/collab requests cascade via FKs.
+    await db.delete(idea)
+    await db.commit()
+
+
 def _notify(
     db: DbSession,
     *,

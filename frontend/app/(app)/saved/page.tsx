@@ -69,7 +69,13 @@ export default function SavedPage() {
       ) : (
         <div className="space-y-4">
           {ideas.map((idea) => (
-            <IdeaCard key={idea.id} idea={idea} onUpvote={handleUpvote} onSave={handleSave} />
+            <IdeaCard
+              key={idea.id}
+              idea={idea}
+              onUpvote={handleUpvote}
+              onSave={handleSave}
+              onDelete={(id) => setIdeas((prev) => prev.filter((i) => i.id !== id))}
+            />
           ))}
         </div>
       )}

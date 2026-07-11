@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { api } from "@/lib/api/client";
 import type { Comment, Idea } from "@/lib/api/types";
+import { useAuth } from "@/lib/context/auth";
 
 interface IdeaCardProps {
   idea: Idea;
   onUpvote: (ideaId: number) => Promise<void>;
   onSave: (ideaId: number) => Promise<void>;
+  /** Called after the author deletes this idea, so the parent can drop it. */
+  onDelete?: (ideaId: number) => void;
 }
 
 function timeAgo(iso: string): string {
@@ -36,9 +39,13 @@ function timeAgo(iso: string): string {
   return `${value}${unit} ago`;
 }
 
-export function IdeaCard({ idea, onUpvote, onSave }: IdeaCardProps) {
+export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
+  const { user } = useAuth();
+  const isOwner = user?.id === idea.author.id;
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Comments
   const [showComments, setShowComments] = useState(false);
@@ -58,6 +65,19 @@ export function IdeaCard({ idea, onUpvote, onSave }: IdeaCardProps) {
       await fn();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setMenuOpen(false);
+    if (!window.confirm("Delete this idea? This cannot be undone.")) return;
+    setDeleting(true);
+    try {
+      await api.ideas.remove(idea.id);
+      onDelete?.(idea.id);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to delete idea");
+      setDeleting(false);
     }
   };
 
@@ -134,11 +154,36 @@ export function IdeaCard({ idea, onUpvote, onSave }: IdeaCardProps) {
             </p>
           </div>
         </div>
-        <button className="text-neutral-400 hover:text-neutral-700 transition p-1">
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 8a2 2 0 100-4 2 2 0 000 4zm0 6a2 2 0 100-4 2 2 0 000 4zm0 6a2 2 0 100-4 2 2 0 000 4z" />
-          </svg>
-        </button>
+        {isOwner && (
+          <div className="relative flex-shrink-0">
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              disabled={deleting}
+              className="text-neutral-400 hover:text-neutral-700 transition p-1 disabled:opacity-50"
+              aria-label="Idea options"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 8a2 2 0 100-4 2 2 0 000 4zm0 6a2 2 0 100-4 2 2 0 000 4zm0 6a2 2 0 100-4 2 2 0 000 4z" />
+              </svg>
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                <div className="absolute right-0 top-8 z-20 w-40 bg-white border border-neutral-200 rounded-xl shadow-lg py-1">
+                  <button
+                    onClick={handleDelete}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm font-semibold text-destructive-500 hover:bg-destructive-500/5 transition"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete idea
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Title + category */}

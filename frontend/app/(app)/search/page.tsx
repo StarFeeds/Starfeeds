@@ -126,7 +126,13 @@ function SearchResultsView() {
                 Ideas ({ideas.length})
               </h2>
               {ideas.map((idea) => (
-                <IdeaCard key={idea.id} idea={idea} onUpvote={handleUpvote} onSave={handleSave} />
+                <IdeaCard
+                  key={idea.id}
+                  idea={idea}
+                  onUpvote={handleUpvote}
+                  onSave={handleSave}
+                  onDelete={(id) => setIdeas((prev) => prev.filter((i) => i.id !== id))}
+                />
               ))}
             </section>
           )}
