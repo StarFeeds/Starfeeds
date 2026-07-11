@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
+import { Avatar } from "@/components/Avatar";
 import { IdeaCard } from "@/components/IdeaCard";
 import { MakePostModal } from "@/components/MakePostModal";
+import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { api } from "@/lib/api/client";
 import { Idea } from "@/lib/api/types";
 import { useAuth } from "@/lib/context/auth";
@@ -28,6 +30,36 @@ export default function HomePage() {
   const [filterCategory, setFilterCategory] = useState("All");
   const [isPublic, setIsPublic] = useState(true);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [myIdeaCount, setMyIdeaCount] = useState<number | null>(null);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(true);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setOnboardingDismissed(localStorage.getItem("onboarding_dismissed") === "1");
+    }
+  }, []);
+
+  // Track whether the user has posted, to drive the onboarding checklist.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await api.ideas.list(1, 1, undefined, "recent", { authorId: user.id });
+        if (!cancelled) setMyIdeaCount(resp.total);
+      } catch {
+        if (!cancelled) setMyIdeaCount(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const dismissOnboarding = () => {
+    setOnboardingDismissed(true);
+    if (typeof window !== "undefined") localStorage.setItem("onboarding_dismissed", "1");
+  };
 
   const fetchIdeas = async () => {
     setLoading(true);
@@ -75,16 +107,40 @@ export default function HomePage() {
     );
   }
 
-  const initial = user?.username?.[0]?.toUpperCase() ?? "?";
+  const onboardingSteps = user
+    ? [
+        {
+          key: "photo",
+          label: "Add a profile photo",
+          done: !!user.avatar_url,
+          actionLabel: "Add photo",
+          href: "/profile/edit",
+        },
+        {
+          key: "idea",
+          label: "Post your first idea",
+          done: (myIdeaCount ?? 0) > 0,
+          actionLabel: "Post idea",
+          onClick: () => setComposerOpen(true),
+        },
+      ]
+    : [];
+  const showOnboarding =
+    !!user &&
+    !onboardingDismissed &&
+    myIdeaCount !== null &&
+    onboardingSteps.some((s) => !s.done);
 
   return (
     <AppShell>
+      {showOnboarding && (
+        <OnboardingChecklist steps={onboardingSteps} onDismiss={dismissOnboarding} />
+      )}
+
       {/* Composer */}
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-xs p-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-sm">{initial}</span>
-          </div>
+          <Avatar src={user?.avatar_url} name={user?.full_name ?? user?.username} size={40} />
           <button
             type="button"
             onClick={() => setComposerOpen(true)}
@@ -161,8 +217,14 @@ export default function HomePage() {
       {loading ? (
         <div className="text-center py-12 text-neutral-600">Loading ideas...</div>
       ) : ideas.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-2xl border border-neutral-200 text-neutral-600">
-          No ideas yet. Be the first to share!
+        <div className="text-center py-12 bg-white rounded-2xl border border-neutral-200">
+          <p className="text-neutral-600 mb-3">No ideas here yet.</p>
+          <button
+            onClick={() => setComposerOpen(true)}
+            className="px-5 h-10 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-full transition"
+          >
+            Share the first idea
+          </button>
         </div>
       ) : (
         <div className="space-y-4">
@@ -181,7 +243,10 @@ export default function HomePage() {
       <MakePostModal
         open={composerOpen}
         onClose={() => setComposerOpen(false)}
-        onCreated={fetchIdeas}
+        onCreated={() => {
+          fetchIdeas();
+          setMyIdeaCount((c) => (c ?? 0) + 1);
+        }}
       />
     </AppShell>
   );
