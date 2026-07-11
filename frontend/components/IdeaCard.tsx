@@ -40,6 +40,35 @@ function timeAgo(iso: string): string {
   return `${value}${unit} ago`;
 }
 
+type BodySection = { label: string | null; text: string };
+
+/**
+ * Split a body written as "**Problem** ... **Solution** ..." into labeled
+ * sections. Returns null when there are no ** ** markers (plain body).
+ */
+function parseSections(body: string): BodySection[] | null {
+  const re = /\*\*\s*(.+?)\s*\*\*/g;
+  const sections: BodySection[] = [];
+  let match: RegExpExecArray | null;
+  let lastEnd = 0;
+  let pendingLabel: string | null = null;
+
+  while ((match = re.exec(body)) !== null) {
+    const between = body.slice(lastEnd, match.index).trim();
+    if (pendingLabel !== null || between) {
+      sections.push({ label: pendingLabel, text: between });
+    }
+    pendingLabel = match[1].trim();
+    lastEnd = re.lastIndex;
+  }
+
+  if (pendingLabel === null) return null; // no markers at all
+
+  const tail = body.slice(lastEnd).trim();
+  sections.push({ label: pendingLabel, text: tail });
+  return sections.filter((s) => s.label || s.text);
+}
+
 export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
   const { user } = useAuth();
   const isOwner = user?.id === idea.author.id;
@@ -125,8 +154,12 @@ export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
     }
   };
 
+  const sections = parseSections(idea.body);
   const isLong = idea.body.length > 150;
   const bodyText = expanded || !isLong ? idea.body : idea.body.slice(0, 150).trimEnd();
+  // Structured bodies show the first section collapsed, the rest on expand.
+  const visibleSections = sections && !expanded ? sections.slice(0, 1) : sections;
+  const hasMoreSections = !!sections && sections.length > 1;
 
   return (
     <div className="bg-white rounded-2xl border border-neutral-200 shadow-xs p-5">
@@ -190,18 +223,45 @@ export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
       </p>
 
       {/* Body */}
-      <p className="text-neutral-700 text-sm leading-relaxed mb-4">
-        {bodyText}
-        {isLong && !expanded && "… "}
-        {isLong && (
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="text-primary-600 hover:text-primary-700 font-semibold"
-          >
-            {expanded ? " less" : "more"}
-          </button>
-        )}
-      </p>
+      {sections ? (
+        <div className="mb-4 space-y-3">
+          {visibleSections!.map((s, i) => (
+            <div key={i}>
+              {s.label && (
+                <p className="text-xs font-bold text-primary-700 uppercase tracking-wide mb-0.5">
+                  {s.label}
+                </p>
+              )}
+              {s.text && (
+                <p className="text-neutral-700 text-sm leading-relaxed whitespace-pre-line">
+                  {s.text}
+                </p>
+              )}
+            </div>
+          ))}
+          {hasMoreSections && (
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="text-primary-600 hover:text-primary-700 font-semibold text-sm"
+            >
+              {expanded ? "Show less" : "Show more"}
+            </button>
+          )}
+        </div>
+      ) : (
+        <p className="text-neutral-700 text-sm leading-relaxed mb-4 whitespace-pre-line">
+          {bodyText}
+          {isLong && !expanded && "… "}
+          {isLong && (
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="text-primary-600 hover:text-primary-700 font-semibold"
+            >
+              {expanded ? " less" : " more"}
+            </button>
+          )}
+        </p>
+      )}
 
       {/* Stats */}
       <div className="flex items-center justify-between text-sm text-neutral-600 mb-3">
