@@ -32,7 +32,7 @@ DEMO_USERS = [
         "email": "demo@starfeeds.app",
         "username": "miabaga",
         "full_name": "MI Abaga",
-        "headline": "Entrepreneur",
+        "headline": "Innovator",
         "password": "password123",
         "is_online": True,
     },

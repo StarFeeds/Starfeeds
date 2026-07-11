@@ -26,9 +26,10 @@ class User(Base, TimestampMixin):
     full_name: Mapped[str] = mapped_column(String(120))
     hashed_password: Mapped[str] = mapped_column(String(255))
 
-    headline: Mapped[str] = mapped_column(String(120), default="Entrepreneur")
+    headline: Mapped[str] = mapped_column(String(120), default="Innovator")
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
-    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Text (not String(500)) so it can hold a resized data: URL avatar.
+    avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
     is_online: Mapped[bool] = mapped_column(default=False)
 

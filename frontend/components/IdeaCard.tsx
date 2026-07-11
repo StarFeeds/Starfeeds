@@ -4,6 +4,7 @@ import { useState } from "react";
 import { api } from "@/lib/api/client";
 import type { Comment, Idea } from "@/lib/api/types";
 import { useAuth } from "@/lib/context/auth";
+import { Avatar } from "@/components/Avatar";
 
 interface IdeaCardProps {
   idea: Idea;
@@ -133,11 +134,7 @@ export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="w-11 h-11 bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-sm font-bold">
-                {idea.author.username[0].toUpperCase()}
-              </span>
-            </div>
+            <Avatar src={idea.author.avatar_url} name={idea.author.full_name ?? idea.author.username} size={44} />
             {idea.author.is_online && (
               <span className="absolute bottom-0 right-0 w-3 h-3 bg-success-500 border-2 border-white rounded-full" />
             )}

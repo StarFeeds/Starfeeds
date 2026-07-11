@@ -38,7 +38,7 @@ class UserUpdate(BaseModel):
     full_name: str | None = Field(default=None, min_length=1, max_length=120)
     headline: str | None = Field(default=None, max_length=120)
     bio: str | None = None
-    avatar_url: str | None = Field(default=None, max_length=500)
+    avatar_url: str | None = None  # may be a long data: URL
     email: EmailStr | None = None
     phone: str | None = Field(default=None, max_length=40)
 

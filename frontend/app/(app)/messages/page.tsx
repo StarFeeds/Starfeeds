@@ -10,17 +10,7 @@ import {
 } from "@/lib/api/types";
 import { useAuth } from "@/lib/context/auth";
 import { useRealtime } from "@/lib/context/realtime";
-
-function Avatar({ name, size = 40 }: { name: string; size?: number }) {
-  return (
-    <div
-      style={{ width: size, height: size }}
-      className="rounded-full bg-gradient-to-br from-primary-400 to-secondary-500 flex items-center justify-center flex-shrink-0"
-    >
-      <span className="text-white text-sm font-bold">{name?.[0] ?? "?"}</span>
-    </div>
-  );
-}
+import { Avatar } from "@/components/Avatar";
 
 function timeLabel(iso: string | null): string {
   if (!iso) return "";
@@ -188,7 +178,7 @@ export default function MessagesPage() {
                       activeId === c.id ? "bg-primary-50/60" : "hover:bg-neutral-50"
                     }`}
                   >
-                    <Avatar name={c.other_user.full_name} />
+                    <Avatar src={c.other_user.avatar_url} name={c.other_user.full_name} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <p className="font-semibold text-sm text-neutral-900 truncate">
@@ -222,7 +212,7 @@ export default function MessagesPage() {
                 {collab.map((r) => (
                   <div key={r.id}>
                     <div className="flex items-center gap-3 mb-2">
-                      <Avatar name={r.from_user.full_name} />
+                      <Avatar src={r.from_user.avatar_url} name={r.from_user.full_name} />
                       <div className="min-w-0">
                         <p className="font-semibold text-sm text-neutral-900 truncate">
                           {r.from_user.full_name}
@@ -268,7 +258,7 @@ export default function MessagesPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
                   </button>
-                  <Avatar name={active.other_user.full_name} size={44} />
+                  <Avatar src={active.other_user.avatar_url} name={active.other_user.full_name} size={44} />
                   <div>
                     <p className="font-bold text-neutral-900 leading-tight">
                       {active.other_user.full_name}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
+import { Avatar } from "@/components/Avatar";
 import { IdeaCard } from "@/components/IdeaCard";
 import { api } from "@/lib/api/client";
 import { Idea } from "@/lib/api/types";
@@ -61,8 +62,6 @@ export default function ProfilePage() {
     };
   }, [user]);
 
-  const initial = user?.username?.[0]?.toUpperCase() ?? "?";
-
   const noop = async () => {};
 
   const sidebar = (
@@ -70,9 +69,7 @@ export default function ProfilePage() {
       {/* Profile card */}
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-xs p-5">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold">{initial}</span>
-          </div>
+          <Avatar src={user?.avatar_url} name={user?.full_name ?? user?.username} size={48} />
           <div className="min-w-0">
             <h3 className="font-bold text-neutral-900 truncate">{user?.full_name ?? "Your name"}</h3>
             <p className="text-sm text-neutral-600 truncate">{user?.headline ?? "Member"}</p>

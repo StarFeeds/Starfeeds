@@ -26,6 +26,36 @@ export default function EditProfilePage() {
 
   const initial = (fullName || user?.username || "?")[0]?.toUpperCase();
 
+  // Read an image file, resize to <=256px, and store as a compact JPEG data URL.
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new window.Image();
+      img.onload = () => {
+        const max = 256;
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, w, h);
+        setAvatarUrl(canvas.toDataURL("image/jpeg", 0.85));
+        setError(null);
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -104,18 +134,33 @@ export default function EditProfilePage() {
               className={inputCls}
               value={headline}
               onChange={(e) => setHeadline(e.target.value)}
-              placeholder="e.g. Entrepreneur"
+              placeholder="e.g. Innovator"
             />
           </div>
 
           <div>
-            <label className={labelCls}>Avatar URL</label>
-            <input
-              className={inputCls}
-              value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-              placeholder="https://..."
-            />
+            <label className={labelCls}>Profile picture</label>
+            <div className="flex items-center gap-3">
+              <label className="inline-flex items-center gap-2 px-4 h-11 border border-neutral-300 rounded-lg text-sm font-semibold text-neutral-700 hover:bg-neutral-50 cursor-pointer transition">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {avatarUrl ? "Change photo" : "Upload photo"}
+                <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
+              </label>
+              {avatarUrl && (
+                <button
+                  type="button"
+                  onClick={() => setAvatarUrl("")}
+                  className="text-sm font-semibold text-destructive-500 hover:underline"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-neutral-500 mt-1.5">
+              JPG or PNG. It&apos;s resized automatically before saving.
+            </p>
           </div>
 
           <div>

@@ -3,6 +3,7 @@
 import { useAuth } from "@/lib/context/auth";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { Avatar } from "@/components/Avatar";
 
 const navItems = [
   {
@@ -45,16 +46,12 @@ export function Sidebar() {
     router.push("/login");
   };
 
-  const initial = user?.username?.[0]?.toUpperCase() ?? "?";
-
   return (
     <aside className="hidden md:flex flex-col gap-4 w-72 flex-shrink-0">
       {/* Profile card */}
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-xs p-5">
         <Link href="/profile" className="flex items-center gap-3 group">
-          <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold">{initial}</span>
-          </div>
+          <Avatar src={user?.avatar_url} name={user?.full_name ?? user?.username} size={48} />
           <div className="min-w-0">
             <h3 className="font-bold text-neutral-900 truncate group-hover:text-primary-700 transition">
               {user?.full_name ?? "Your name"}
