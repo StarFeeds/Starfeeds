@@ -10,6 +10,7 @@ from app.models import (
     Notification,
     SavedIdea,
     Upvote,
+    User,
 )
 from app.schemas.idea import (
     CommentCreate,
