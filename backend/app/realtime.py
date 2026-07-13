@@ -51,7 +51,7 @@ def _public_user(user: Any) -> dict[str, Any] | None:
         "headline": user.headline,
         "bio": user.bio,
         "avatar_url": user.avatar_url,
-        "is_online": user.is_online,
+        "is_online": getattr(user, "show_online_status", user.is_online),
     }
 
 

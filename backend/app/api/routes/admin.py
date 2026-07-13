@@ -226,12 +226,14 @@ async def delete_idea(idea_id: int, db: DbSession, admin: AdminUser) -> None:
 # --------------------------------------------------------------------------- #
 @router.post("/announcements", status_code=status.HTTP_201_CREATED)
 async def broadcast(payload: AnnouncementCreate, db: DbSession, admin: AdminUser) -> dict:
-    user_ids = (await db.scalars(select(User.id))).all()
+    rows = (await db.execute(select(User.id, User.notification_prefs))).all()
+    # Respect each user's "General Announcements" preference.
+    recipient_ids = [uid for uid, prefs in rows if (prefs or {}).get("announcements", True)]
     db.add_all(
         [
             Notification(user_id=uid, actor_id=None, type="system", text=payload.text)
-            for uid in user_ids
+            for uid in recipient_ids
         ]
     )
     await db.commit()
-    return {"delivered": len(user_ids)}
+    return {"delivered": len(recipient_ids)}

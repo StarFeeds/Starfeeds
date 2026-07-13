@@ -40,6 +40,21 @@ class User(Base, TimestampMixin):
         JSON, default=lambda: dict(DEFAULT_NOTIFICATION_PREFS)
     )
 
+    @property
+    def show_online_status(self) -> bool:
+        """Online status as OTHERS should see it — respects the show_online pref."""
+        if not self.is_online:
+            return False
+        return bool((self.notification_prefs or {}).get("show_online", True))
+
+    def wants_notification(self, notif_type: str) -> bool:
+        """Whether this user wants a notification of the given type."""
+        mapping = {"comment": "comments", "collab": "collab", "system": "announcements"}
+        key = mapping.get(notif_type)
+        if key is None:
+            return True  # e.g. "upvote" has no toggle — always deliver
+        return bool((self.notification_prefs or {}).get(key, True))
+
     ideas: Mapped[list["Idea"]] = relationship(
         back_populates="author", cascade="all, delete-orphan"
     )

@@ -142,20 +142,20 @@ async def delete_idea(
 def _notify(
     db: DbSession,
     *,
-    user_id: int,
+    recipient: User,
     actor_id: int,
     type: str,
     text: str,
     idea_id: int | None = None,
 ) -> Notification | None:
-    """Queue a notification (skips self-notifications). Caller commits.
-
-    Returns the queued Notification so the caller can broadcast it after commit.
+    """Queue a notification (skips self-notifications and prefs the recipient
+    has turned off). Caller commits. Returns the queued Notification (or None)
+    so the caller can broadcast it after commit.
     """
-    if user_id == actor_id:
+    if recipient.id == actor_id or not recipient.wants_notification(type):
         return None
     notif = Notification(
-        user_id=user_id,
+        user_id=recipient.id,
         actor_id=actor_id,
         type=type,
         text=text,
@@ -182,7 +182,7 @@ async def toggle_upvote(
         db.add(Upvote(idea_id=idea_id, user_id=current_user.id))
         notif = _notify(
             db,
-            user_id=idea.author_id,
+            recipient=idea.author,
             actor_id=current_user.id,
             type="upvote",
             text=f'upvoted your idea "{idea.title}"',
@@ -244,7 +244,7 @@ async def create_comment(
     db.add(comment)
     notif = _notify(
         db,
-        user_id=idea.author_id,
+        recipient=idea.author,
         actor_id=current_user.id,
         type="comment",
         text=f'commented on your idea "{idea.title}"',
@@ -294,7 +294,7 @@ async def express_interest(
     db.add(req)
     notif = _notify(
         db,
-        user_id=idea.author_id,
+        recipient=idea.author,
         actor_id=current_user.id,
         type="collab",
         text=f'expressed interest in your idea "{idea.title}"',

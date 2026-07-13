@@ -6,13 +6,22 @@ import { AppShell } from "@/components/AppShell";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/context/auth";
 
-function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
+function Toggle({
+  on,
+  onChange,
+  disabled,
+}: {
+  on: boolean;
+  onChange: () => void;
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
       onClick={onChange}
+      disabled={disabled}
       className={`relative w-11 h-6 rounded-full transition flex-shrink-0 ${
-        on ? "bg-primary-600" : "bg-neutral-300"
+        disabled ? "bg-neutral-200 cursor-not-allowed" : on ? "bg-primary-600" : "bg-neutral-300"
       }`}
       role="switch"
       aria-checked={on}
@@ -30,15 +39,24 @@ function ToggleRow({
   label,
   value,
   onChange,
+  comingSoon,
 }: {
   label: string;
   value: boolean;
   onChange: () => void;
+  comingSoon?: boolean;
 }) {
   return (
     <div className="flex items-center justify-between py-2.5">
-      <span className="text-sm text-neutral-700">{label}</span>
-      <Toggle on={value} onChange={onChange} />
+      <span className={`text-sm flex items-center gap-2 ${comingSoon ? "text-neutral-400" : "text-neutral-700"}`}>
+        {label}
+        {comingSoon && (
+          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-neutral-100 text-neutral-400 uppercase tracking-wide">
+            Soon
+          </span>
+        )}
+      </span>
+      <Toggle on={comingSoon ? false : value} onChange={onChange} disabled={comingSoon} />
     </div>
   );
 }
@@ -181,14 +199,14 @@ export default function SettingsPage() {
         <div className="divide-y divide-neutral-100">
           <ToggleRow label="Comments on posts" value={prefs.comments} onChange={() => toggle("comments")} />
           <ToggleRow label="Collaboration Requests" value={prefs.collab} onChange={() => toggle("collab")} />
-          <ToggleRow label="Mentions in discussions" value={prefs.mentions} onChange={() => toggle("mentions")} />
+          <ToggleRow label="Mentions in discussions" value={prefs.mentions} onChange={() => toggle("mentions")} comingSoon />
           <ToggleRow label="General Announcements" value={prefs.announcements} onChange={() => toggle("announcements")} />
         </div>
 
         <h3 className="font-bold text-neutral-900 mt-5 mb-1">Email Preferences</h3>
         <div className="divide-y divide-neutral-100">
-          <ToggleRow label="Weekly Digests" value={prefs.weekly} onChange={() => toggle("weekly")} />
-          <ToggleRow label="Important Updates" value={prefs.important} onChange={() => toggle("important")} />
+          <ToggleRow label="Weekly Digests" value={prefs.weekly} onChange={() => toggle("weekly")} comingSoon />
+          <ToggleRow label="Important Updates" value={prefs.important} onChange={() => toggle("important")} comingSoon />
         </div>
       </section>
 
@@ -200,6 +218,7 @@ export default function SettingsPage() {
             label="Public profile"
             value={visibility.publicProfile}
             onChange={() => setVisibility((v) => ({ ...v, publicProfile: !v.publicProfile }))}
+            comingSoon
           />
           <ToggleRow
             label="Show when I'm online"

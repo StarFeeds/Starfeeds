@@ -172,14 +172,15 @@ async def _resolve_collab(
             db, req.from_user_id, req.to_user_id
         )
         convo_id = convo.id
-        notif = Notification(
-            user_id=req.from_user_id,
-            actor_id=current_user.id,
-            type="collab",
-            text="accepted your collaboration request",
-            idea_id=req.idea_id,
-        )
-        db.add(notif)
+        if req.from_user.wants_notification("collab"):
+            notif = Notification(
+                user_id=req.from_user_id,
+                actor_id=current_user.id,
+                type="collab",
+                text="accepted your collaboration request",
+                idea_id=req.idea_id,
+            )
+            db.add(notif)
 
     await db.commit()
     await db.refresh(req, attribute_names=["from_user", "to_user"])

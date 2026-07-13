@@ -16,7 +16,7 @@ class UserCreate(UserBase):
 
 
 class UserPublic(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int
     username: str
@@ -24,7 +24,9 @@ class UserPublic(BaseModel):
     headline: str
     bio: str | None = None
     avatar_url: str | None = None
-    is_online: bool
+    # Reads User.show_online_status so the "Show when I'm online" pref is honored
+    # everywhere this user is shown to others.
+    is_online: bool = Field(default=False, validation_alias="show_online_status")
 
 
 class UserMe(UserPublic):
