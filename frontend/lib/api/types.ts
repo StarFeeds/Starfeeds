@@ -137,6 +137,8 @@ export interface AdminUser {
   is_active: boolean;
   is_online: boolean;
   created_at: string;
+  signup_ip: string | null;
+  signup_location: string | null;
   idea_count: number;
 }
 

@@ -1,8 +1,9 @@
-from fastapi import APIRouter, BackgroundTasks, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 from sqlalchemy import or_, select
 
 from app.api.deps import CurrentUser, DbSession
 from app.core.config import settings
+from app.geo import client_ip, geolocate_and_save
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -32,7 +33,10 @@ def _tokens_for(user: User) -> TokenPair:
 
 @router.post("/register", response_model=TokenPair, status_code=status.HTTP_201_CREATED)
 async def register(
-    payload: UserCreate, db: DbSession, background_tasks: BackgroundTasks
+    payload: UserCreate,
+    db: DbSession,
+    background_tasks: BackgroundTasks,
+    request: Request,
 ) -> TokenPair:
     existing = await db.scalar(
         select(User).where(
@@ -44,6 +48,7 @@ async def register(
             status_code=status.HTTP_409_CONFLICT,
             detail="A user with that email or username already exists",
         )
+    ip = client_ip(request)
     user = User(
         email=payload.email,
         username=payload.username,
@@ -52,14 +57,16 @@ async def register(
         hashed_password=hash_password(payload.password),
         is_online=True,
         is_admin=payload.email.lower() in settings.admin_emails_list,
+        signup_ip=ip,
     )
     db.add(user)
     await db.commit()
     await db.refresh(user)
 
-    # Fire the welcome email after the response is sent. Failures are logged
-    # inside send_welcome_email and never affect signup.
+    # After the response: send the welcome email and resolve signup location.
+    # Both are best-effort and never affect signup.
     background_tasks.add_task(send_welcome_email, user.email, user.full_name)
+    background_tasks.add_task(geolocate_and_save, user.id, ip)
 
     return _tokens_for(user)
 

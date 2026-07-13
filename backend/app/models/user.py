@@ -32,6 +32,9 @@ class User(Base, TimestampMixin):
     # Text (not String(500)) so it can hold a resized data: URL avatar.
     avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    # Signup metadata for admin visibility.
+    signup_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    signup_location: Mapped[str | None] = mapped_column(String(160), nullable=True)
     is_online: Mapped[bool] = mapped_column(default=False)
     is_admin: Mapped[bool] = mapped_column(default=False, server_default=sa.false())
     is_active: Mapped[bool] = mapped_column(default=True, server_default=sa.true())

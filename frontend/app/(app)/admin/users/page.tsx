@@ -5,6 +5,12 @@ import { api } from "@/lib/api/client";
 import { AdminUser } from "@/lib/api/types";
 import { useAuth } from "@/lib/context/auth";
 
+function fmtDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
 export default function AdminUsersPage() {
   const { user: me } = useAuth();
   const [q, setQ] = useState("");
@@ -79,6 +85,22 @@ export default function AdminUsersPage() {
                 </div>
                 <p className="text-xs text-neutral-500 truncate">
                   @{u.username} · {u.email} · {u.idea_count} idea{u.idea_count === 1 ? "" : "s"}
+                </p>
+                <p className="text-xs text-neutral-400 truncate mt-0.5">
+                  <span className="inline-flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Joined {fmtDate(u.created_at)}
+                  </span>
+                  {" · "}
+                  <span className="inline-flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    {u.signup_location || u.signup_ip || "Unknown"}
+                  </span>
                 </p>
               </div>
               <div className="flex flex-wrap gap-2 flex-shrink-0">

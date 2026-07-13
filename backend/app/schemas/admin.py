@@ -47,6 +47,8 @@ class AdminUserOut(BaseModel):
     is_active: bool
     is_online: bool
     created_at: datetime
+    signup_ip: str | None = None
+    signup_location: str | None = None
     idea_count: int = 0
 
 
