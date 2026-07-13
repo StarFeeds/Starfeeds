@@ -6,6 +6,7 @@ import { Avatar } from "@/components/Avatar";
 import { IdeaCard } from "@/components/IdeaCard";
 import { MakePostModal } from "@/components/MakePostModal";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
+import { ExploreStepper } from "@/components/ExploreStepper";
 import { api } from "@/lib/api/client";
 import { Idea } from "@/lib/api/types";
 import { useAuth } from "@/lib/context/auth";
@@ -32,12 +33,20 @@ export default function HomePage() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [myIdeaCount, setMyIdeaCount] = useState<number | null>(null);
   const [onboardingDismissed, setOnboardingDismissed] = useState(true);
+  const [explored, setExplored] = useState(true);
+  const [exploreOpen, setExploreOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setOnboardingDismissed(localStorage.getItem("onboarding_dismissed") === "1");
+      setExplored(localStorage.getItem("onboarding_explored") === "1");
     }
   }, []);
+
+  const markExplored = () => {
+    setExplored(true);
+    if (typeof window !== "undefined") localStorage.setItem("onboarding_explored", "1");
+  };
 
   // Track whether the user has posted, to drive the onboarding checklist.
   useEffect(() => {
@@ -107,8 +116,23 @@ export default function HomePage() {
     );
   }
 
+  const posted = (myIdeaCount ?? 0) > 0;
   const onboardingSteps = user
     ? [
+        {
+          key: "idea",
+          label: "Post your first idea",
+          done: posted,
+          actionLabel: "Post idea",
+          onClick: () => setComposerOpen(true),
+        },
+        {
+          key: "explore",
+          label: "Explore 5 fresh ideas",
+          done: explored,
+          actionLabel: "Explore",
+          onClick: () => setExploreOpen(true),
+        },
         {
           key: "photo",
           label: "Add a profile photo",
@@ -116,20 +140,13 @@ export default function HomePage() {
           actionLabel: "Add photo",
           href: "/profile/edit",
         },
-        {
-          key: "idea",
-          label: "Post your first idea",
-          done: (myIdeaCount ?? 0) > 0,
-          actionLabel: "Post idea",
-          onClick: () => setComposerOpen(true),
-        },
       ]
     : [];
+  // Card stays until the two required steps (post + explore) are done. Photo is
+  // a non-blocking bonus.
+  const requiredDone = posted && explored;
   const showOnboarding =
-    !!user &&
-    !onboardingDismissed &&
-    myIdeaCount !== null &&
-    onboardingSteps.some((s) => !s.done);
+    !!user && !onboardingDismissed && myIdeaCount !== null && !requiredDone;
 
   return (
     <AppShell>
@@ -247,6 +264,13 @@ export default function HomePage() {
           fetchIdeas();
           setMyIdeaCount((c) => (c ?? 0) + 1);
         }}
+      />
+
+      <ExploreStepper
+        open={exploreOpen}
+        onClose={() => setExploreOpen(false)}
+        onComplete={markExplored}
+        currentUserId={user?.id}
       />
     </AppShell>
   );
