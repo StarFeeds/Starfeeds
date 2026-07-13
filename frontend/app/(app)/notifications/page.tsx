@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { api } from "@/lib/api/client";
 import { Notification } from "@/lib/api/types";
@@ -37,6 +38,7 @@ function timeAgo(iso: string): string {
 }
 
 export default function NotificationsPage() {
+  const router = useRouter();
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +49,14 @@ export default function NotificationsPage() {
     (async () => {
       try {
         const data = await api.notifications.list();
-        if (!cancelled) setItems(data);
+        if (cancelled) return;
+        setItems(data);
+        // Opening the page counts as "seen": clear the header badge and persist
+        // read state server-side. Items keep their unread styling for this view.
+        if (data.some((n) => !n.read)) {
+          setUnreadNotifications(0);
+          api.notifications.markAllRead().catch(() => {});
+        }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load");
       } finally {
@@ -57,7 +66,14 @@ export default function NotificationsPage() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const openNotification = (n: Notification) => {
+    markOne(n.id);
+    // Collaboration requests are acted on in the Activity tab.
+    if (n.type === "collab") router.push("/activity?tab=collab");
+  };
 
   // Prepend notifications that arrive live over the WebSocket.
   useEffect(() => {
@@ -132,7 +148,7 @@ export default function NotificationsPage() {
           {items.map((n) => (
             <button
               key={n.id}
-              onClick={() => markOne(n.id)}
+              onClick={() => openNotification(n)}
               className={`w-full flex items-start gap-3 px-5 py-4 text-left transition hover:bg-neutral-50 ${
                 n.read ? "" : "bg-primary-50/40"
               }`}

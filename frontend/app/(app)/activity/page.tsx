@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { api } from "@/lib/api/client";
 import { CollaborationRequest, Notification } from "@/lib/api/types";
@@ -38,8 +39,14 @@ function Avatar({ name }: { name: string }) {
   );
 }
 
-export default function ActivityPage() {
-  const [tab, setTab] = useState<TabKey>("all");
+const TAB_KEYS = TABS.map((t) => t.key);
+
+function ActivityView() {
+  const params = useSearchParams();
+  const initialTab = TAB_KEYS.includes(params.get("tab") as TabKey)
+    ? (params.get("tab") as TabKey)
+    : "all";
+  const [tab, setTab] = useState<TabKey>(initialTab);
   const [items, setItems] = useState<Notification[]>([]);
   const [requests, setRequests] = useState<CollaborationRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -184,5 +191,15 @@ export default function ActivityPage() {
         </div>
       )}
     </AppShell>
+  );
+}
+
+export default function ActivityPage() {
+  return (
+    <Suspense
+      fallback={<AppShell><div className="text-center py-12 text-neutral-600">Loading…</div></AppShell>}
+    >
+      <ActivityView />
+    </Suspense>
   );
 }
