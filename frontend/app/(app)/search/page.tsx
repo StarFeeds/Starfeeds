@@ -1,8 +1,10 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { Avatar } from "@/components/Avatar";
 import { IdeaCard } from "@/components/IdeaCard";
 import { api } from "@/lib/api/client";
 import { Idea, PublicUser } from "@/lib/api/types";
@@ -100,13 +102,15 @@ function SearchResultsView() {
               <div className="divide-y divide-neutral-100">
                 {users.map((u) => (
                   <div key={u.id} className="flex items-center gap-3 py-3">
-                    <span className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-secondary-500 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-sm font-bold">{u.full_name[0]}</span>
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-neutral-900 truncate">{u.full_name}</p>
-                      <p className="text-xs text-neutral-500 truncate">{u.headline}</p>
-                    </div>
+                    <Link href={`/u/${u.username}`} className="flex items-center gap-3 flex-1 min-w-0 group">
+                      <Avatar src={u.avatar_url} name={u.full_name ?? u.username} size={40} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-neutral-900 truncate group-hover:text-primary-700 transition">
+                          {u.full_name}
+                        </p>
+                        <p className="text-xs text-neutral-500 truncate">{u.headline}</p>
+                      </div>
+                    </Link>
                     <button
                       onClick={() => messageUser(u.id)}
                       disabled={messaging === u.id}

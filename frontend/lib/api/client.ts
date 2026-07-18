@@ -16,6 +16,7 @@ import {
   AdminUserList,
   AdminIdea,
   AdminIdeaList,
+  PublicUser,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -354,6 +355,11 @@ export const api = {
   search: async (q: string, limit = 8): Promise<SearchResults> => {
     const params = new URLSearchParams({ q, limit: String(limit) });
     return apiCall<SearchResults>(`/search?${params}`, { requiresAuth: true });
+  },
+
+  users: {
+    get: async (username: string): Promise<PublicUser> =>
+      apiCall<PublicUser>(`/users/${encodeURIComponent(username)}`, { requiresAuth: true }),
   },
 
   admin: {

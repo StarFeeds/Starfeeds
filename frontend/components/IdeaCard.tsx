@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api/client";
 import type { Comment, Idea } from "@/lib/api/types";
 import { useAuth } from "@/lib/context/auth";
@@ -165,7 +166,7 @@ export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
     <div className="bg-white rounded-2xl border border-neutral-200 shadow-xs p-5">
       {/* Author row */}
       <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
+        <Link href={`/u/${idea.author.username}`} className="flex items-center gap-3 group">
           <div className="relative">
             <Avatar src={idea.author.avatar_url} name={idea.author.full_name ?? idea.author.username} size={44} />
             {idea.author.is_online && (
@@ -173,7 +174,7 @@ export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
             )}
           </div>
           <div className="min-w-0">
-            <h4 className="font-bold text-neutral-900 leading-tight">{idea.author.full_name}</h4>
+            <h4 className="font-bold text-neutral-900 leading-tight group-hover:text-primary-700 transition">{idea.author.full_name}</h4>
             <p className="text-xs text-neutral-600">{idea.author.headline}</p>
             <p className="text-xs text-neutral-500 mt-0.5 flex items-center gap-1.5">
               Posted {timeAgo(idea.created_at)}
@@ -183,7 +184,7 @@ export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
               </svg>
             </p>
           </div>
-        </div>
+        </Link>
         {isOwner && (
           <div className="relative flex-shrink-0">
             <button
