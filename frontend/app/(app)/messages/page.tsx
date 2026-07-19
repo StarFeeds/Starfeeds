@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Header } from "@/components/Header";
 import { api } from "@/lib/api/client";
 import {
@@ -258,16 +259,21 @@ export default function MessagesPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
                   </button>
-                  <Avatar src={active.other_user.avatar_url} name={active.other_user.full_name} size={44} />
-                  <div>
-                    <p className="font-bold text-neutral-900 leading-tight">
-                      {active.other_user.full_name}
-                    </p>
-                    <p className="text-xs text-neutral-600">{active.other_user.headline}</p>
-                    <p className="text-xs text-neutral-500">
-                      {active.other_user.is_online ? "Online" : "Offline"}
-                    </p>
-                  </div>
+                  <Link
+                    href={`/u/${active.other_user.username}`}
+                    className="flex items-center gap-3 group min-w-0"
+                  >
+                    <Avatar src={active.other_user.avatar_url} name={active.other_user.full_name} size={44} />
+                    <div className="min-w-0">
+                      <p className="font-bold text-neutral-900 leading-tight truncate group-hover:text-primary-700 transition">
+                        {active.other_user.full_name}
+                      </p>
+                      <p className="text-xs text-neutral-600 truncate">{active.other_user.headline}</p>
+                      <p className="text-xs text-neutral-500">
+                        {active.other_user.is_online ? "Online" : "Offline"}
+                      </p>
+                    </div>
+                  </Link>
                 </div>
               </div>
 

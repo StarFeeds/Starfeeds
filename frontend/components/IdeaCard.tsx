@@ -347,13 +347,16 @@ export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
             <div className="space-y-3">
               {comments.map((c) => (
                 <div key={c.id} className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-secondary-500 flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs font-bold">
-                      {c.author.full_name[0]}
-                    </span>
-                  </div>
+                  <Link href={`/u/${c.author.username}`} className="flex-shrink-0">
+                    <Avatar src={c.author.avatar_url} name={c.author.full_name ?? c.author.username} size={32} />
+                  </Link>
                   <div className="flex-1 min-w-0 bg-neutral-50 rounded-xl px-3 py-2">
-                    <p className="text-sm font-semibold text-neutral-900">{c.author.full_name}</p>
+                    <Link
+                      href={`/u/${c.author.username}`}
+                      className="text-sm font-semibold text-neutral-900 hover:text-primary-700 transition"
+                    >
+                      {c.author.full_name}
+                    </Link>
                     <p className="text-sm text-neutral-700">{c.body}</p>
                   </div>
                 </div>

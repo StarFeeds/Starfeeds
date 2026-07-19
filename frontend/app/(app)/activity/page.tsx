@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { api } from "@/lib/api/client";
@@ -144,17 +145,17 @@ function ActivityView() {
         <div className="bg-white rounded-2xl border border-neutral-200 shadow-xs divide-y divide-neutral-100">
           {requests.map((r) => (
             <div key={r.id} className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
+              <Link href={`/u/${r.from_user.username}`} className="flex items-center gap-3 flex-1 min-w-0 group">
                 <Avatar name={r.from_user.full_name} />
                 <div className="min-w-0">
                   <p className="text-sm text-neutral-900">
-                    <span className="font-semibold">{r.from_user.full_name}</span> wants to collaborate
+                    <span className="font-semibold group-hover:text-primary-700 transition">{r.from_user.full_name}</span> wants to collaborate
                   </p>
                   <p className="text-xs text-neutral-500">
                     {r.from_user.headline} · {timeAgo(r.created_at)}
                   </p>
                 </div>
-              </div>
+              </Link>
               <div className="flex gap-2 flex-shrink-0">
                 <button
                   onClick={() => resolve(r.id, true)}
@@ -176,11 +177,22 @@ function ActivityView() {
         <div className="bg-white rounded-2xl border border-neutral-200 shadow-xs divide-y divide-neutral-100">
           {items.map((n) => (
             <div key={n.id} className="flex items-start gap-3 px-5 py-4">
-              <Avatar name={n.actor?.full_name ?? "S"} />
+              {n.actor ? (
+                <Link href={`/u/${n.actor.username}`}>
+                  <Avatar name={n.actor.full_name} />
+                </Link>
+              ) : (
+                <Avatar name="S" />
+              )}
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-neutral-700">
                   {n.actor && (
-                    <span className="font-semibold text-neutral-900">{n.actor.full_name} </span>
+                    <Link
+                      href={`/u/${n.actor.username}`}
+                      className="font-semibold text-neutral-900 hover:text-primary-700 transition"
+                    >
+                      {n.actor.full_name}{" "}
+                    </Link>
                   )}
                   {n.text}
                 </p>

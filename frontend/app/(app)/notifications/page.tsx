@@ -161,8 +161,18 @@ export default function NotificationsPage() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-neutral-700">
                   {n.actor && (
-                    <span className="font-semibold text-neutral-900">{n.actor.full_name} </span>
-                  )}
+                    <span
+                      role="link"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/u/${n.actor!.username}`);
+                      }}
+                      className="font-semibold text-neutral-900 hover:text-primary-700 hover:underline cursor-pointer"
+                    >
+                      {n.actor.full_name}
+                    </span>
+                  )}{" "}
                   {n.text}
                 </p>
                 <p className="text-xs text-neutral-500 mt-0.5">{timeAgo(n.created_at)}</p>
