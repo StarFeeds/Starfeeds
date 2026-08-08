@@ -138,6 +138,9 @@ async def create_idea(
         author_id=current_user.id,
     )
     db.add(idea)
+    await db.flush()
+    # The author is automatically a member of their project's group.
+    db.add(GroupMember(idea_id=idea.id, user_id=current_user.id))
     await db.commit()
     await db.refresh(idea, attribute_names=["author"])
     return await _serialize(db, idea, current_user.id)
