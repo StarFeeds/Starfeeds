@@ -17,6 +17,8 @@ import {
   AdminIdea,
   AdminIdeaList,
   PublicUser,
+  GroupMessage,
+  GroupSummary,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -360,6 +362,21 @@ export const api = {
   users: {
     get: async (username: string): Promise<PublicUser> =>
       apiCall<PublicUser>(`/users/${encodeURIComponent(username)}`, { requiresAuth: true }),
+  },
+
+  groups: {
+    myGroups: async (): Promise<GroupSummary[]> =>
+      apiCall<GroupSummary[]>("/me/groups", { requiresAuth: true }),
+    members: async (ideaId: number): Promise<PublicUser[]> =>
+      apiCall<PublicUser[]>(`/ideas/${ideaId}/members`, { requiresAuth: true }),
+    listMessages: async (ideaId: number): Promise<GroupMessage[]> =>
+      apiCall<GroupMessage[]>(`/ideas/${ideaId}/group/messages`, { requiresAuth: true }),
+    sendMessage: async (ideaId: number, body: string): Promise<GroupMessage> =>
+      apiCall<GroupMessage>(`/ideas/${ideaId}/group/messages`, {
+        method: "POST",
+        body: JSON.stringify({ body }),
+        requiresAuth: true,
+      }),
   },
 
   admin: {

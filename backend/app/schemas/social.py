@@ -70,3 +70,26 @@ class ActivityItem(BaseModel):
     created_at: datetime
     idea_id: int | None = None
     actor: UserPublic | None = None
+
+
+class GroupMessageCreate(BaseModel):
+    body: str = Field(min_length=1, max_length=4000)
+
+
+class GroupMessageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    body: str
+    sender_id: int
+    created_at: datetime
+    sender: UserPublic
+
+
+class GroupSummary(BaseModel):
+    """A project the current user belongs to."""
+
+    idea_id: int
+    title: str
+    member_count: int
+    is_owner: bool

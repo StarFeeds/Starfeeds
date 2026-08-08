@@ -106,6 +106,23 @@ export interface Idea {
   saved_by_me: boolean;
   upvoted_by_me: boolean;
   hidden?: boolean;
+  member_count: number;
+  join_status: "none" | "pending" | "member" | "owner";
+}
+
+export interface GroupMessage {
+  id: number;
+  body: string;
+  sender_id: number;
+  created_at: string;
+  sender: PublicUser;
+}
+
+export interface GroupSummary {
+  idea_id: number;
+  title: string;
+  member_count: number;
+  is_owner: boolean;
 }
 
 export interface AdminStats {

@@ -2,6 +2,8 @@ from app.models.idea import Comment, Idea, SavedIdea, Upvote
 from app.models.social import (
     CollaborationRequest,
     Conversation,
+    GroupMember,
+    GroupMessage,
     Message,
     Notification,
 )
@@ -17,4 +19,6 @@ __all__ = [
     "CollaborationRequest",
     "Conversation",
     "Message",
+    "GroupMember",
+    "GroupMessage",
 ]

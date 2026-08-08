@@ -91,8 +91,8 @@ export function MakePostModal({ open, onClose, onCreated }: MakePostModalProps) 
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-neutral-900/40 p-4 py-10">
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-md">
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
-          <h2 className="font-bold text-lg text-neutral-900 uppercase tracking-wide">
-            Fill out this form correctly
+          <h2 className="font-bold text-lg text-neutral-900">
+            Share what you&apos;re working on
           </h2>
           <button
             onClick={onClose}
@@ -114,16 +114,16 @@ export function MakePostModal({ open, onClose, onCreated }: MakePostModalProps) 
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Idea Title {req}</label>
+              <label className={labelCls}>Project title {req}</label>
               <input
                 className={inputCls}
-                placeholder="Enter the title of your idea"
+                placeholder="What are you working on?"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
             </div>
             <div>
-              <label className={labelCls}>Idea Category {req}</label>
+              <label className={labelCls}>Category {req}</label>
               <select
                 className={`${inputCls} ${category ? "text-neutral-900" : "text-neutral-500"}`}
                 value={category}
@@ -217,7 +217,7 @@ export function MakePostModal({ open, onClose, onCreated }: MakePostModalProps) 
               disabled={submitting}
               className="inline-flex items-center gap-2 px-10 h-12 bg-neutral-900 hover:bg-neutral-700 disabled:bg-neutral-400 text-white font-semibold rounded-full transition"
             >
-              {submitting ? "Posting..." : "Post Idea"}
+              {submitting ? "Posting..." : "Post Project"}
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>

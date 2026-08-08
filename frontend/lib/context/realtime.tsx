@@ -9,12 +9,13 @@ import React, {
   useState,
 } from "react";
 import { api, getAccessToken, getRealtimeUrl } from "@/lib/api/client";
-import { Notification, Message } from "@/lib/api/types";
+import { Notification, Message, GroupMessage } from "@/lib/api/types";
 import { useAuth } from "@/lib/context/auth";
 
 export type RealtimeEvent =
   | { type: "notification"; notification: Notification }
-  | { type: "message"; conversation_id: number; message: Message };
+  | { type: "message"; conversation_id: number; message: Message }
+  | { type: "group_message"; idea_id: number; message: GroupMessage };
 
 type Listener = (event: RealtimeEvent) => void;
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, ForeignKey, String, Text
+from sqlalchemy import Boolean, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -88,4 +88,38 @@ class Message(Base, TimestampMixin):
     read: Mapped[bool] = mapped_column(Boolean, default=False)
 
     conversation: Mapped["Conversation"] = relationship(back_populates="messages")
+    sender: Mapped["User"] = relationship(foreign_keys=[sender_id])
+
+
+class GroupMember(Base, TimestampMixin):
+    """Membership in a project's (idea's) working group."""
+
+    __tablename__ = "group_members"
+    __table_args__ = (UniqueConstraint("idea_id", "user_id", name="uq_group_member"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    idea_id: Mapped[int] = mapped_column(
+        ForeignKey("ideas.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+
+    user: Mapped["User"] = relationship(foreign_keys=[user_id])
+
+
+class GroupMessage(Base, TimestampMixin):
+    """A message in a project group's discussion."""
+
+    __tablename__ = "group_messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    idea_id: Mapped[int] = mapped_column(
+        ForeignKey("ideas.id", ondelete="CASCADE"), index=True
+    )
+    sender_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    body: Mapped[str] = mapped_column(Text)
+
     sender: Mapped["User"] = relationship(foreign_keys=[sender_id])

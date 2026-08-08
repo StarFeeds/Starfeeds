@@ -121,14 +121,14 @@ export default function HomePage() {
     ? [
         {
           key: "idea",
-          label: "Post your first idea",
+          label: "Post your first project",
           done: posted,
-          actionLabel: "Post idea",
+          actionLabel: "Post",
           onClick: () => setComposerOpen(true),
         },
         {
           key: "explore",
-          label: "Explore 5 fresh ideas",
+          label: "Explore 5 fresh projects",
           done: explored,
           actionLabel: "Explore",
           onClick: () => setExploreOpen(true),
@@ -163,7 +163,7 @@ export default function HomePage() {
             onClick={() => setComposerOpen(true)}
             className="flex-1 h-11 px-4 bg-neutral-100 rounded-full text-sm text-neutral-500 text-left hover:bg-neutral-200 transition"
           >
-            Post your idea...
+            Share what you&apos;re working on...
           </button>
           <button
             type="button"
@@ -235,12 +235,12 @@ export default function HomePage() {
         <div className="text-center py-12 text-neutral-600">Loading ideas...</div>
       ) : ideas.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-2xl border border-neutral-200">
-          <p className="text-neutral-600 mb-3">No ideas here yet.</p>
+          <p className="text-neutral-600 mb-3">No projects here yet.</p>
           <button
             onClick={() => setComposerOpen(true)}
             className="px-5 h-10 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-full transition"
           >
-            Share the first idea
+            Share what you&apos;re working on
           </button>
         </div>
       ) : (

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api/client";
 import type { Comment, Idea } from "@/lib/api/types";
 import { useAuth } from "@/lib/context/auth";
@@ -72,6 +73,7 @@ function parseSections(body: string): BodySection[] | null {
 
 export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
   const { user } = useAuth();
+  const router = useRouter();
   const isOwner = user?.id === idea.author.id;
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -86,8 +88,9 @@ export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
 
-  // Express interest
-  const [interest, setInterest] = useState<"idle" | "sending" | "done">("idle");
+  // Join a project's group
+  const [joinStatus, setJoinStatus] = useState(idea.join_status);
+  const [joining, setJoining] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const run = (fn: () => Promise<void>) => async () => {
@@ -143,17 +146,20 @@ export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
     }
   };
 
-  const expressInterest = async () => {
-    setInterest("sending");
+  const requestJoin = async () => {
+    setJoining(true);
     setActionError(null);
     try {
       await api.ideas.expressInterest(idea.id);
-      setInterest("done");
+      setJoinStatus("pending");
     } catch (err) {
-      setInterest("idle");
-      setActionError(err instanceof Error ? err.message : "Failed to express interest");
+      setActionError(err instanceof Error ? err.message : "Failed to request to join");
+    } finally {
+      setJoining(false);
     }
   };
+
+  const openDiscussion = () => router.push(`/projects/${idea.id}/discussion`);
 
   const sections = parseSections(idea.body);
   const isLong = idea.body.length > 150;
@@ -266,13 +272,21 @@ export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
 
       {/* Stats */}
       <div className="flex items-center justify-between text-sm text-neutral-600 mb-3">
-        <div className="flex items-center gap-2">
-          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-primary-500 to-secondary-500">
-            <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M2 21h2V9H2v12zm20-11a2 2 0 00-2-2h-6.31l.95-4.57.03-.32a1.5 1.5 0 00-.44-1.06L13.17 1 6.59 7.59A2 2 0 006 9v10a2 2 0 002 2h9a2 2 0 001.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-1z" />
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-primary-500 to-secondary-500">
+              <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M2 21h2V9H2v12zm20-11a2 2 0 00-2-2h-6.31l.95-4.57.03-.32a1.5 1.5 0 00-.44-1.06L13.17 1 6.59 7.59A2 2 0 006 9v10a2 2 0 002 2h9a2 2 0 001.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-1z" />
+              </svg>
+            </span>
+            <span className="font-semibold text-neutral-900">{idea.upvote_count}</span>
+          </div>
+          <span className="flex items-center gap-1.5">
+            <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4z" />
             </svg>
+            {idea.member_count} {idea.member_count === 1 ? "member" : "members"}
           </span>
-          <span className="font-semibold text-neutral-900">{idea.upvote_count}</span>
         </div>
         <button onClick={toggleComments} className="hover:text-neutral-900 transition">
           {commentCount} Comments
@@ -304,20 +318,28 @@ export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
           </svg>
           Comment
         </button>
-        <button
-          onClick={expressInterest}
-          disabled={interest !== "idle"}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition ${
-            interest === "done"
-              ? "text-success-500"
-              : "text-neutral-600 hover:bg-neutral-100 disabled:opacity-60"
-          }`}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-3-6.5" />
-          </svg>
-          {interest === "done" ? "Interested" : interest === "sending" ? "Sending..." : "Express Interest"}
-        </button>
+        {joinStatus === "member" || joinStatus === "owner" ? (
+          <button
+            onClick={openDiscussion}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-primary-600 hover:bg-primary-50 transition"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l3.586-3.586z" />
+            </svg>
+            Discussion
+          </button>
+        ) : (
+          <button
+            onClick={requestJoin}
+            disabled={joining || joinStatus === "pending"}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-neutral-600 hover:bg-neutral-100 disabled:opacity-60 transition"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+            {joinStatus === "pending" ? "Requested" : joining ? "Requesting…" : "Request to Join"}
+          </button>
+        )}
         <button
           onClick={run(() => onSave(idea.id))}
           disabled={loading}

@@ -89,3 +89,20 @@ async def push_message(recipient_id: int, conversation_id: int, msg: Any) -> Non
             },
         },
     )
+
+
+async def push_group_message(recipient_id: int, idea_id: int, msg: Any, sender: Any) -> None:
+    await manager.send_to_user(
+        recipient_id,
+        {
+            "type": "group_message",
+            "idea_id": idea_id,
+            "message": {
+                "id": msg.id,
+                "body": msg.body,
+                "sender_id": msg.sender_id,
+                "created_at": msg.created_at.isoformat() if msg.created_at else None,
+                "sender": _public_user(sender),
+            },
+        },
+    )

@@ -6,6 +6,7 @@ from app.api.deps import CurrentUser, DbSession
 from app.models import (
     CollaborationRequest,
     Comment,
+    GroupMember,
     Idea,
     Notification,
     SavedIdea,
@@ -42,11 +43,37 @@ async def _serialize(db: DbSession, idea: Idea, viewer_id: int) -> IdeaOut:
         .select_from(SavedIdea)
         .where(SavedIdea.idea_id == idea.id, SavedIdea.user_id == viewer_id)
     )
+    member_count = await db.scalar(
+        select(func.count()).select_from(GroupMember).where(GroupMember.idea_id == idea.id)
+    )
+    is_member = await db.scalar(
+        select(func.count())
+        .select_from(GroupMember)
+        .where(GroupMember.idea_id == idea.id, GroupMember.user_id == viewer_id)
+    )
+    if idea.author_id == viewer_id:
+        join_status = "owner"
+    elif is_member:
+        join_status = "member"
+    else:
+        pending = await db.scalar(
+            select(func.count())
+            .select_from(CollaborationRequest)
+            .where(
+                CollaborationRequest.idea_id == idea.id,
+                CollaborationRequest.from_user_id == viewer_id,
+                CollaborationRequest.status == "pending",
+            )
+        )
+        join_status = "pending" if pending else "none"
+
     out = IdeaOut.model_validate(idea)
     out.upvote_count = upvote_count or 0
     out.comment_count = comment_count or 0
     out.upvoted_by_me = bool(upvoted)
     out.saved_by_me = bool(saved)
+    out.member_count = member_count or 0
+    out.join_status = join_status
     return out
 
 
@@ -271,7 +298,18 @@ async def express_interest(
     if idea.author_id == current_user.id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You cannot express interest in your own idea",
+            detail="You own this project",
+        )
+
+    already_member = await db.scalar(
+        select(GroupMember).where(
+            GroupMember.idea_id == idea_id, GroupMember.user_id == current_user.id
+        )
+    )
+    if already_member is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You're already a member of this project",
         )
 
     existing = await db.scalar(
@@ -284,7 +322,7 @@ async def express_interest(
     if existing is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="You already expressed interest in this idea",
+            detail="You already requested to join this project",
         )
 
     req = CollaborationRequest(
@@ -298,7 +336,7 @@ async def express_interest(
         recipient=idea.author,
         actor_id=current_user.id,
         type="collab",
-        text=f'expressed interest in your idea "{idea.title}"',
+        text=f'requested to join your project "{idea.title}"',
         idea_id=idea.id,
     )
     await db.commit()

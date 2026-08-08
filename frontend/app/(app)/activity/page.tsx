@@ -149,7 +149,7 @@ function ActivityView() {
                 <Avatar name={r.from_user.full_name} />
                 <div className="min-w-0">
                   <p className="text-sm text-neutral-900">
-                    <span className="font-semibold group-hover:text-primary-700 transition">{r.from_user.full_name}</span> wants to collaborate
+                    <span className="font-semibold group-hover:text-primary-700 transition">{r.from_user.full_name}</span> wants to join your project
                   </p>
                   <p className="text-xs text-neutral-500">
                     {r.from_user.headline} · {timeAgo(r.created_at)}

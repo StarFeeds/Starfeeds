@@ -14,6 +14,7 @@ from app.core.security import decode_token
 from app.models import (
     CollaborationRequest,
     Conversation,
+    GroupMember,
     Message,
     Notification,
     User,
@@ -163,21 +164,24 @@ async def _resolve_collab(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
     req.status = new_status
-    convo_id: int | None = None
     notif: Notification | None = None
 
-    if new_status == "accepted":
-        # Open (or reuse) a conversation so the two can actually collaborate.
-        convo = await _get_or_create_conversation(
-            db, req.from_user_id, req.to_user_id
+    if new_status == "accepted" and req.idea_id is not None:
+        # Add the requester to the project's working group.
+        already = await db.scalar(
+            select(GroupMember).where(
+                GroupMember.idea_id == req.idea_id,
+                GroupMember.user_id == req.from_user_id,
+            )
         )
-        convo_id = convo.id
+        if already is None:
+            db.add(GroupMember(idea_id=req.idea_id, user_id=req.from_user_id))
         if req.from_user.wants_notification("collab"):
             notif = Notification(
                 user_id=req.from_user_id,
                 actor_id=current_user.id,
                 type="collab",
-                text="accepted your collaboration request",
+                text="accepted your request to join the project",
                 idea_id=req.idea_id,
             )
             db.add(notif)
@@ -188,8 +192,9 @@ async def _resolve_collab(
         await db.refresh(notif)
         await push_notification(req.from_user_id, notif, current_user)
 
-    # Transient attribute consumed by the response model (not a DB column).
-    req.conversation_id = convo_id
+    # Accepting adds the requester to the project group (no DM). The response's
+    # conversation_id stays null.
+    req.conversation_id = None
     return req
 
 

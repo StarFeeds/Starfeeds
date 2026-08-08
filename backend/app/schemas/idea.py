@@ -28,6 +28,9 @@ class IdeaOut(BaseModel):
     comment_count: int = 0
     saved_by_me: bool = False
     upvoted_by_me: bool = False
+    member_count: int = 0
+    # none | pending | member | owner
+    join_status: str = "none"
 
 
 class IdeaListResponse(BaseModel):
