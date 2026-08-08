@@ -7,13 +7,8 @@ import { api } from "@/lib/api/client";
 import { Idea } from "@/lib/api/types";
 import { useAuth } from "@/lib/context/auth";
 import { Logo } from "@/components/Logo";
-import { Avatar } from "@/components/Avatar";
 import { SignupPrompt } from "@/components/SignupPrompt";
-
-function preview(body: string): string {
-  const text = body.replace(/\*\*/g, " ").replace(/\s+/g, " ").trim();
-  return text.length > 160 ? text.slice(0, 160).trimEnd() + "…" : text;
-}
+import { ProblemCarousel } from "@/components/ProblemCarousel";
 
 export default function LandingPage() {
   const { user, isLoading } = useAuth();
@@ -96,10 +91,10 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Feed */}
-        <section className="max-w-6xl mx-auto px-4 pb-20">
-          <h2 className="text-sm font-semibold text-neutral-500 uppercase tracking-wide mb-4 px-1">
-            Fresh from the community
+        {/* Problem carousel */}
+        <section className="max-w-3xl mx-auto px-4 pb-20">
+          <h2 className="text-sm font-semibold text-neutral-500 uppercase tracking-wide mb-4 px-1 text-center">
+            Problems people are solving right now
           </h2>
           {loading ? (
             <div className="text-center py-16 text-neutral-600">Loading projects…</div>
@@ -109,36 +104,8 @@ export default function LandingPage() {
               <Link href="/register" className="text-primary-600 font-semibold">Sign up</Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {projects.map((p, i) => (
-                <div
-                  key={p.id}
-                  onClick={gate("join this project")}
-                  className="animate-fade-up cursor-pointer bg-white rounded-2xl border border-neutral-200 shadow-xs p-5 flex flex-col hover:shadow-md hover:-translate-y-1 transition duration-200"
-                  style={{ animationDelay: `${Math.min(i * 0.05, 0.4)}s` }}
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <Avatar src={p.author.avatar_url} name={p.author.full_name ?? p.author.username} size={32} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-neutral-900 truncate">{p.author.full_name}</p>
-                      <p className="text-xs text-neutral-500 truncate">{p.author.headline}</p>
-                    </div>
-                  </div>
-                  <h3 className="font-bold text-neutral-900 leading-snug">{p.title}</h3>
-                  <p className="text-xs font-bold text-secondary-700 uppercase tracking-wide mb-2">{p.category}</p>
-                  <p className="text-sm text-neutral-600 leading-relaxed flex-1">{preview(p.body)}</p>
-                  <div className="flex items-center gap-4 mt-4 pt-3 border-t border-neutral-100 text-xs text-neutral-500">
-                    <span className="flex items-center gap-1.5">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4z" />
-                      </svg>
-                      {p.member_count} {p.member_count === 1 ? "member" : "members"}
-                    </span>
-                    <span>{p.comment_count} comments</span>
-                    <span className="ml-auto text-primary-600 font-semibold">Request to Join →</span>
-                  </div>
-                </div>
-              ))}
+            <div className="animate-fade-up" style={{ animationDelay: "0.24s" }}>
+              <ProblemCarousel projects={projects} onInteract={gate("join this project")} />
             </div>
           )}
         </section>
