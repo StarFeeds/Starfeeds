@@ -17,21 +17,7 @@ function extractProblem(body: string): string {
     }
   }
   if (!text) text = body.replace(/\*\*/g, " ").replace(/\s+/g, " ").trim();
-  return text.length > 220 ? text.slice(0, 220).trimEnd() + "…" : text;
-}
-
-/** Position of a card in the deck relative to the active one. */
-function deckStyle(pos: number, n: number): CSSProperties {
-  if (pos === 0)
-    return { transform: "translateX(0) translateY(0) scale(1) rotate(0deg)", opacity: 1, zIndex: 40 };
-  if (pos === 1)
-    return { transform: "translateY(16px) scale(0.95) rotate(3deg)", opacity: 0.9, zIndex: 30 };
-  if (pos === 2)
-    return { transform: "translateY(30px) scale(0.9) rotate(-3deg)", opacity: 0.7, zIndex: 20 };
-  // The card that just left the front slides off to the side (a "dealt" card).
-  if (pos === n - 1)
-    return { transform: "translateX(-135%) translateY(-10px) rotate(-12deg) scale(0.95)", opacity: 0, zIndex: 10 };
-  return { transform: "translateY(42px) scale(0.85)", opacity: 0, zIndex: 0 };
+  return text.length > 240 ? text.slice(0, 240).trimEnd() + "…" : text;
 }
 
 export function ProblemCarousel({
@@ -67,50 +53,67 @@ export function ProblemCarousel({
 
   return (
     <div onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
-      {/* Deck */}
-      <div className="relative h-[24rem] [perspective:1200px]">
+      {/* Fanned deck */}
+      <div className="relative h-[26rem] flex items-start justify-center">
         {projects.map((p, i) => {
-          const pos = (i - index + n) % n;
-          const front = pos === 0;
+          const delta = i - index;
+          const abs = Math.abs(delta);
+          const front = delta === 0;
+          const visible = abs <= 2;
+          const style: CSSProperties = {
+            transform: `translateX(-50%) translateX(${delta * 46}px) rotate(${delta * 7}deg) scale(${front ? 1 : 0.9})`,
+            transformOrigin: "50% 150%",
+            opacity: visible ? (front ? 1 : 0.92) : 0,
+            zIndex: 50 - abs,
+            pointerEvents: visible ? "auto" : "none",
+          };
           return (
-            <div
+            <button
               key={p.id}
-              className="absolute inset-x-0 top-0 mx-auto max-w-xl transition-all duration-500 ease-out"
-              style={{ ...deckStyle(pos, n), pointerEvents: front ? "auto" : "none" }}
-              aria-hidden={!front}
+              onClick={front ? onInteract : () => go(i)}
+              aria-hidden={!visible}
+              style={style}
+              className="absolute left-1/2 top-2 w-64 sm:w-72 h-[21rem] transition-all duration-500 ease-out text-left"
             >
-              <div className="rounded-3xl border border-neutral-200 shadow-md bg-gradient-to-br from-primary-50 via-white to-secondary-500/5 px-6 sm:px-12 py-10 sm:py-12 min-h-[22rem] flex flex-col items-center justify-center text-center">
-                <span className="inline-block px-3 py-1 mb-5 rounded-full bg-primary-100 text-primary-700 text-xs font-bold uppercase tracking-wide">
+              <div
+                className={`w-full h-full rounded-3xl border px-5 py-6 flex flex-col ${
+                  front
+                    ? "border-primary-200 shadow-md bg-gradient-to-br from-primary-50 via-white to-secondary-500/10"
+                    : "border-neutral-200 shadow-sm bg-white"
+                }`}
+              >
+                <span className="inline-block self-start px-2.5 py-1 rounded-full bg-primary-100 text-primary-700 text-[10px] font-bold uppercase tracking-wide">
                   {p.category}
                 </span>
-                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-3">
+                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-widest mt-4 mb-1.5">
                   The problem
                 </p>
-                <h2 className="text-2xl sm:text-3xl font-bold text-neutral-900 leading-snug">
+                <h2 className="text-lg font-bold text-neutral-900 leading-snug line-clamp-5">
                   {extractProblem(p.body)}
                 </h2>
-                <div className="flex items-center gap-2 mt-6">
-                  <Avatar src={p.author.avatar_url} name={p.author.full_name ?? p.author.username} size={30} />
-                  <span className="text-sm text-neutral-600">
-                    <span className="font-semibold text-neutral-800">{p.author.full_name}</span> is building{" "}
-                    <span className="font-semibold text-neutral-800">{p.title}</span>
-                  </span>
+
+                <div className="mt-auto pt-4">
+                  <div className="flex items-center gap-2">
+                    <Avatar src={p.author.avatar_url} name={p.author.full_name ?? p.author.username} size={26} />
+                    <span className="text-xs text-neutral-600 truncate">
+                      <span className="font-semibold text-neutral-800">{p.author.full_name}</span> · {p.title}
+                    </span>
+                  </div>
+                  {front && (
+                    <span className="mt-4 block w-full h-10 leading-10 text-center bg-primary-600 text-white text-sm font-semibold rounded-full">
+                      Request to join →
+                    </span>
+                  )}
                 </div>
-                <button
-                  onClick={onInteract}
-                  className="mt-6 px-7 h-11 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-full transition shadow-sm"
-                >
-                  Request to join →
-                </button>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
 
       {/* Controls */}
       {n > 1 && (
-        <div className="flex items-center justify-center gap-4 mt-6">
+        <div className="flex items-center justify-center gap-4 mt-4">
           <button
             onClick={() => go(index - 1)}
             aria-label="Previous"
