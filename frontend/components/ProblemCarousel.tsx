@@ -54,16 +54,16 @@ export function ProblemCarousel({
   return (
     <div onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
       {/* Fanned deck */}
-      <div className="relative h-[26rem] flex items-start justify-center">
+      <div className="relative h-[26rem] flex items-start justify-center overflow-hidden">
         {projects.map((p, i) => {
           const delta = i - index;
           const abs = Math.abs(delta);
           const front = delta === 0;
-          const visible = abs <= 2;
+          const visible = abs <= 4;
           const style: CSSProperties = {
-            transform: `translateX(-50%) translateX(${delta * 46}px) rotate(${delta * 7}deg) scale(${front ? 1 : 0.9})`,
-            transformOrigin: "50% 150%",
-            opacity: visible ? (front ? 1 : 0.92) : 0,
+            transform: `translateX(-50%) translateX(${delta * 92}px) rotate(${delta * 12}deg) scale(${front ? 1 : 0.88})`,
+            transformOrigin: "50% 175%",
+            opacity: visible ? (front ? 1 : abs === 1 ? 0.95 : 0.8) : 0,
             zIndex: 50 - abs,
             pointerEvents: visible ? "auto" : "none",
           };
