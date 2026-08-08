@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import CurrentUser, DbSession
+from app.api.deps import CurrentUser, DbSession, OptionalUser
 from app.models import (
     CollaborationRequest,
     Comment,
@@ -26,37 +26,43 @@ from app.schemas.social import CollaborationRequestOut
 router = APIRouter(prefix="/ideas", tags=["ideas"])
 
 
-async def _serialize(db: DbSession, idea: Idea, viewer_id: int) -> IdeaOut:
+async def _serialize(db: DbSession, idea: Idea, viewer_id: int | None) -> IdeaOut:
     upvote_count = await db.scalar(
         select(func.count()).select_from(Upvote).where(Upvote.idea_id == idea.id)
     )
     comment_count = await db.scalar(
         select(func.count()).select_from(Comment).where(Comment.idea_id == idea.id)
     )
-    upvoted = await db.scalar(
-        select(func.count())
-        .select_from(Upvote)
-        .where(Upvote.idea_id == idea.id, Upvote.user_id == viewer_id)
-    )
-    saved = await db.scalar(
-        select(func.count())
-        .select_from(SavedIdea)
-        .where(SavedIdea.idea_id == idea.id, SavedIdea.user_id == viewer_id)
-    )
     member_count = await db.scalar(
         select(func.count()).select_from(GroupMember).where(GroupMember.idea_id == idea.id)
     )
-    is_member = await db.scalar(
-        select(func.count())
-        .select_from(GroupMember)
-        .where(GroupMember.idea_id == idea.id, GroupMember.user_id == viewer_id)
-    )
-    if idea.author_id == viewer_id:
-        join_status = "owner"
-    elif is_member:
-        join_status = "member"
-    else:
-        pending = await db.scalar(
+
+    upvoted = saved = False
+    join_status = "none"
+    if viewer_id is not None:
+        upvoted = bool(
+            await db.scalar(
+                select(func.count())
+                .select_from(Upvote)
+                .where(Upvote.idea_id == idea.id, Upvote.user_id == viewer_id)
+            )
+        )
+        saved = bool(
+            await db.scalar(
+                select(func.count())
+                .select_from(SavedIdea)
+                .where(SavedIdea.idea_id == idea.id, SavedIdea.user_id == viewer_id)
+            )
+        )
+        if idea.author_id == viewer_id:
+            join_status = "owner"
+        elif await db.scalar(
+            select(func.count())
+            .select_from(GroupMember)
+            .where(GroupMember.idea_id == idea.id, GroupMember.user_id == viewer_id)
+        ):
+            join_status = "member"
+        elif await db.scalar(
             select(func.count())
             .select_from(CollaborationRequest)
             .where(
@@ -64,14 +70,14 @@ async def _serialize(db: DbSession, idea: Idea, viewer_id: int) -> IdeaOut:
                 CollaborationRequest.from_user_id == viewer_id,
                 CollaborationRequest.status == "pending",
             )
-        )
-        join_status = "pending" if pending else "none"
+        ):
+            join_status = "pending"
 
     out = IdeaOut.model_validate(idea)
     out.upvote_count = upvote_count or 0
     out.comment_count = comment_count or 0
-    out.upvoted_by_me = bool(upvoted)
-    out.saved_by_me = bool(saved)
+    out.upvoted_by_me = upvoted
+    out.saved_by_me = saved
     out.member_count = member_count or 0
     out.join_status = join_status
     return out
@@ -80,7 +86,7 @@ async def _serialize(db: DbSession, idea: Idea, viewer_id: int) -> IdeaOut:
 @router.get("", response_model=IdeaListResponse)
 async def list_ideas(
     db: DbSession,
-    current_user: CurrentUser,
+    viewer: OptionalUser,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
     category: str | None = None,
@@ -88,7 +94,12 @@ async def list_ideas(
     saved: bool = False,
     author_id: int | None = None,
 ) -> IdeaListResponse:
+    viewer_id = viewer.id if viewer else None
     stmt = select(Idea).options(selectinload(Idea.author)).where(Idea.hidden.is_(False))
+
+    # Anonymous visitors only see public projects.
+    if viewer is None:
+        stmt = stmt.where(Idea.visibility == "public")
 
     if category:
         stmt = stmt.where(Idea.category == category)
@@ -97,8 +108,10 @@ async def list_ideas(
         stmt = stmt.where(Idea.author_id == author_id)
 
     if saved:
+        if viewer is None:
+            return IdeaListResponse(items=[], total=0, page=page, page_size=page_size)
         stmt = stmt.join(SavedIdea, SavedIdea.idea_id == Idea.id).where(
-            SavedIdea.user_id == current_user.id
+            SavedIdea.user_id == viewer.id
         )
 
     if sort == "top":
@@ -120,7 +133,7 @@ async def list_ideas(
     stmt = stmt.offset((page - 1) * page_size).limit(page_size)
     ideas = (await db.scalars(stmt)).all()
 
-    items = [await _serialize(db, idea, current_user.id) for idea in ideas]
+    items = [await _serialize(db, idea, viewer_id) for idea in ideas]
     return IdeaListResponse(
         items=items, total=total or 0, page=page, page_size=page_size
     )

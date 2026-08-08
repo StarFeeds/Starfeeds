@@ -12,6 +12,10 @@ from app.models import User
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_PREFIX}/auth/login", auto_error=True
 )
+# Same scheme, but does not 401 when no token is present (for public endpoints).
+oauth2_optional = OAuth2PasswordBearer(
+    tokenUrl=f"{settings.API_V1_PREFIX}/auth/login", auto_error=False
+)
 
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 
@@ -35,6 +39,22 @@ async def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+async def get_optional_user(
+    db: DbSession,
+    token: Annotated[str | None, Depends(oauth2_optional)],
+) -> User | None:
+    """Return the user if a valid token is present, else None (no 401)."""
+    if not token:
+        return None
+    subject = decode_token(token, expected_type="access")
+    if subject is None:
+        return None
+    return await db.get(User, int(subject))
+
+
+OptionalUser = Annotated[User | None, Depends(get_optional_user)]
 
 
 async def get_current_admin(current_user: CurrentUser) -> User:

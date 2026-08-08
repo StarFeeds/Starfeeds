@@ -231,6 +231,12 @@ export const api = {
       return apiCall<IdeaListResponse>(`/ideas?${params}`, { requiresAuth: true });
     },
 
+    // Public feed for logged-out visitors (no auth). Only returns public projects.
+    publicList: async (page = 1, pageSize = 12, sort: "recent" | "top" = "recent"): Promise<IdeaListResponse> => {
+      const params = new URLSearchParams({ page: String(page), page_size: String(pageSize), sort });
+      return apiCall<IdeaListResponse>(`/ideas?${params}`);
+    },
+
     listComments: async (ideaId: number): Promise<Comment[]> => {
       return apiCall<Comment[]>(`/ideas/${ideaId}/comments`, { requiresAuth: true });
     },
