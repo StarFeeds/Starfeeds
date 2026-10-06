@@ -76,7 +76,9 @@ export default function RegisterPage() {
         <div className="flex-1 flex items-center justify-center px-6 py-10">
           <div className="w-full max-w-md">
             <div className="flex justify-center mb-6">
-              <Logo size={64} />
+              <Link href="/" aria-label="LikeMinds home">
+                <Logo size={64} />
+              </Link>
             </div>
 
             <div className="text-center mb-6">

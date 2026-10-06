@@ -43,7 +43,9 @@ export default function LoginPage() {
           <div className="w-full max-w-md">
             {/* Logo */}
             <div className="flex justify-center mb-8">
-              <Logo size={64} />
+              <Link href="/" aria-label="LikeMinds home">
+                <Logo size={64} />
+              </Link>
             </div>
 
             <div className="text-center mb-8">
