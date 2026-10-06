@@ -256,10 +256,15 @@ export const api = {
       });
     },
 
-    create: async (title: string, body: string, category: string): Promise<Idea> => {
+    create: async (
+      title: string,
+      body: string,
+      category: string,
+      visibility: "public" | "private" = "public",
+    ): Promise<Idea> => {
       return apiCall<Idea>("/ideas", {
         method: "POST",
-        body: JSON.stringify({ title, body, category, visibility: "public" }),
+        body: JSON.stringify({ title, body, category, visibility }),
         requiresAuth: true,
       });
     },
