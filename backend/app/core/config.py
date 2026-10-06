@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     # Comma-separated emails auto-granted admin on login/signup.
     ADMIN_EMAILS: str = ""
 
+    # Shared secret for scheduled jobs (e.g. the weekly digest, triggered by a
+    # GitHub Actions cron). Unset = those endpoints are disabled.
+    CRON_SECRET: str | None = None
+
     # Public URL of the frontend (used for links in emails).
     FRONTEND_URL: str = "http://localhost:3000"
 

@@ -1,0 +1,26 @@
+name: Weekly digest
+
+# Every Monday 08:00 UTC (09:00 in Lagos). Also runnable by hand from the
+# Actions tab. The API skips anyone already mailed in the last 6 days, so a
+# manual re-run never double-sends.
+on:
+  schedule:
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger weekly digest
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          API_URL: ${{ vars.API_URL || 'https://starfeeds.onrender.com' }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::Add a CRON_SECRET repository secret (same value as on Render)."
+            exit 1
+          fi
+          curl --fail-with-body --retry 3 --retry-delay 20 --retry-all-errors -sS \
+            -X POST -H "X-Cron-Secret: $CRON_SECRET" \
+            "$API_URL/api/v1/internal/digest/weekly"

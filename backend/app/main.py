@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import admin, auth, groups, ideas, links, search, social, unsubscribe, users
+from app.api.routes import admin, auth, groups, ideas, internal, links, search, social, unsubscribe, users
 from app.core.config import settings
 
 
@@ -57,3 +57,4 @@ app.include_router(users.router, prefix=settings.API_V1_PREFIX)
 app.include_router(groups.router, prefix=settings.API_V1_PREFIX)
 app.include_router(links.router, prefix=settings.API_V1_PREFIX)
 app.include_router(unsubscribe.router, prefix=settings.API_V1_PREFIX)
+app.include_router(internal.router, prefix=settings.API_V1_PREFIX)

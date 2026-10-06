@@ -211,7 +211,7 @@ export default function SettingsPage() {
             value={prefs.email_activity}
             onChange={() => toggle("email_activity")}
           />
-          <ToggleRow label="Weekly Digests" value={prefs.weekly} onChange={() => toggle("weekly")} comingSoon />
+          <ToggleRow label="Weekly digest" value={prefs.weekly} onChange={() => toggle("weekly")} />
           <ToggleRow label="Important Updates" value={prefs.important} onChange={() => toggle("important")} comingSoon />
         </div>
       </section>

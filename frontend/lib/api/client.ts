@@ -296,8 +296,8 @@ export const api = {
 
   email: {
     /** One-click unsubscribe from activity emails (token from the email link; no login). */
-    unsubscribe: async (token: string): Promise<{ email: string }> => {
-      return apiCall<{ email: string }>("/email/unsubscribe", {
+    unsubscribe: async (token: string): Promise<{ email: string; scope: "activity" | "weekly" }> => {
+      return apiCall<{ email: string; scope: "activity" | "weekly" }>("/email/unsubscribe", {
         method: "POST",
         body: JSON.stringify({ token }),
       });

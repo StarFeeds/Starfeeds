@@ -50,6 +50,8 @@ class User(Base, TimestampMixin):
     last_activity_email_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # When we last sent the weekly digest (see app/digest.py).
+    last_digest_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     @property
     def show_online_status(self) -> bool:

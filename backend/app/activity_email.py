@@ -25,6 +25,7 @@ from app.core.config import settings
 from app.core.security import create_unsubscribe_token
 from app.db.session import AsyncSessionLocal
 from app.email import send_email
+from app.email_layout import button, wrap
 from app.models import User
 from app.realtime import manager
 
@@ -64,38 +65,13 @@ def _content(
         if preview
         else ""
     )
-    body = f"""\
-<!DOCTYPE html>
-<html>
-  <body style="margin:0;padding:0;background:#f5f5f7;font-family:Arial,Helvetica,sans-serif;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f7;padding:32px 0;">
-      <tr><td align="center">
-        <table role="presentation" width="480" cellpadding="0" cellspacing="0"
-               style="background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #ececf1;">
-          <tr><td style="padding:28px 40px 4px;">
-            <span style="font-size:20px;font-weight:bold;color:#4d0695;letter-spacing:-0.5px;">LikeMinds</span>
-          </td></tr>
-          <tr><td style="padding:12px 40px 0;">
-            <p style="margin:0 0 6px;font-size:15px;color:#3f3f46;">Hi {html.escape(first_name)},</p>
+    inner = f"""            <p style="margin:0 0 6px;font-size:15px;color:#3f3f46;">Hi {html.escape(first_name)},</p>
             <h1 style="margin:0 0 16px;font-size:20px;line-height:1.4;color:#111114;">{html.escape(headline)}</h1>
             {quote}
-            <a href="{html.escape(cta_url)}"
-               style="display:inline-block;background:#4d0695;color:#ffffff;text-decoration:none;
-                      font-weight:bold;font-size:15px;padding:12px 28px;border-radius:999px;">
-              {html.escape(cta_label)}
-            </a>
-          </td></tr>
-          <tr><td style="padding:28px 40px 32px;">
-            <p style="margin:0;font-size:12px;line-height:1.6;color:#9a9aa2;">
-              You're getting this because of activity on your LikeMinds account.
-              <a href="{html.escape(unsub_url)}" style="color:#9a9aa2;">Stop these emails</a>
-            </p>
-          </td></tr>
-        </table>
-      </td></tr>
-    </table>
-  </body>
-</html>"""
+            {button(cta_label, cta_url)}"""
+    body = wrap(
+        inner, reason="You're getting this because of activity on your LikeMinds account.", unsub_url=unsub_url
+    )
     return body, text
 
 

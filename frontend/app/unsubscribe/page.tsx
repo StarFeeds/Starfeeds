@@ -6,7 +6,10 @@ import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api/client";
 import { Logo } from "@/components/Logo";
 
-type State = { status: "working" } | { status: "done"; email: string } | { status: "error"; message: string };
+type State =
+  | { status: "working" }
+  | { status: "done"; email: string; scope: "activity" | "weekly" }
+  | { status: "error"; message: string };
 
 /** Landing page for the "Stop these emails" link in activity emails. */
 function Unsubscribe() {
@@ -19,7 +22,7 @@ function Unsubscribe() {
     if (!token) return;
     api.email
       .unsubscribe(token)
-      .then(({ email }) => setState({ status: "done", email }))
+      .then(({ email, scope }) => setState({ status: "done", email, scope }))
       .catch((err) =>
         setState({ status: "error", message: err instanceof Error ? err.message : "Something went wrong." }),
       );
@@ -37,8 +40,10 @@ function Unsubscribe() {
         <>
           <h1 className="text-xl font-bold text-neutral-900">You&apos;re unsubscribed</h1>
           <p className="mt-2 text-sm text-neutral-600">
-            We won&apos;t email <span className="font-semibold text-neutral-800">{state.email}</span>{" "}
-            about comments, join requests or messages anymore. You&apos;ll still see them in the app.
+            We won&apos;t send <span className="font-semibold text-neutral-800">{state.email}</span>{" "}
+            {state.scope === "weekly"
+              ? "the weekly digest anymore."
+              : "emails about comments, join requests or messages anymore. You'll still see them in the app."}
           </p>
           <p className="mt-2 text-sm text-neutral-600">Changed your mind? Turn them back on in Settings.</p>
         </>
