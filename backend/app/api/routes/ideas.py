@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import selectinload
 
+from app.activity_email import send_activity_email
 from app.api.deps import CurrentUser, DbSession, OptionalUser
 from app.models import (
     CollaborationRequest,
@@ -302,7 +303,11 @@ async def list_comments(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_comment(
-    idea_id: int, payload: CommentCreate, db: DbSession, current_user: CurrentUser
+    idea_id: int,
+    payload: CommentCreate,
+    db: DbSession,
+    current_user: CurrentUser,
+    background_tasks: BackgroundTasks,
 ) -> Comment:
     idea = await _get_idea_or_404(db, idea_id)
     comment = Comment(
@@ -322,6 +327,15 @@ async def create_comment(
     if notif is not None:
         await db.refresh(notif)
         await push_notification(idea.author_id, notif, current_user)
+        background_tasks.add_task(
+            send_activity_email,
+            idea.author_id,
+            subject=f'{current_user.full_name} commented on "{idea.title}"',
+            headline=f'{current_user.full_name} commented on your idea "{idea.title}"',
+            preview=payload.body,
+            path="/notifications",
+            cta_label="Reply on LikeMinds",
+        )
     return comment
 
 
@@ -331,7 +345,7 @@ async def create_comment(
     status_code=status.HTTP_201_CREATED,
 )
 async def express_interest(
-    idea_id: int, db: DbSession, current_user: CurrentUser
+    idea_id: int, db: DbSession, current_user: CurrentUser, background_tasks: BackgroundTasks
 ) -> CollaborationRequest:
     idea = await _get_idea_or_404(db, idea_id)
     if idea.author_id == current_user.id:
@@ -383,4 +397,13 @@ async def express_interest(
     if notif is not None:
         await db.refresh(notif)
         await push_notification(idea.author_id, notif, current_user)
+        background_tasks.add_task(
+            send_activity_email,
+            idea.author_id,
+            subject=f'{current_user.full_name} wants to join "{idea.title}"',
+            headline=f'{current_user.full_name} asked to join your project "{idea.title}"',
+            preview=current_user.headline or None,
+            path="/activity",
+            cta_label="Review request",
+        )
     return req

@@ -7,6 +7,7 @@ export interface NotificationPrefs {
   important: boolean;
   public_profile: boolean;
   show_online: boolean;
+  email_activity?: boolean;
 }
 
 export interface User {

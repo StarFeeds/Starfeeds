@@ -1,5 +1,6 @@
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     HTTPException,
     Query,
     WebSocket,
@@ -9,12 +10,14 @@ from fastapi import (
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import selectinload
 
+from app.activity_email import send_activity_email
 from app.api.deps import CurrentUser, DbSession
 from app.core.security import decode_token
 from app.models import (
     CollaborationRequest,
     Conversation,
     GroupMember,
+    Idea,
     Message,
     Notification,
     User,
@@ -150,7 +153,11 @@ async def list_collab_requests(
 
 
 async def _resolve_collab(
-    request_id: int, new_status: str, db: DbSession, current_user: CurrentUser
+    request_id: int,
+    new_status: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    background_tasks: BackgroundTasks | None = None,
 ) -> CollaborationRequest:
     req = await db.scalar(
         select(CollaborationRequest)
@@ -191,6 +198,17 @@ async def _resolve_collab(
     if notif is not None:
         await db.refresh(notif)
         await push_notification(req.from_user_id, notif, current_user)
+        if background_tasks is not None:
+            idea = await db.get(Idea, req.idea_id)
+            title = idea.title if idea else "the project"
+            background_tasks.add_task(
+                send_activity_email,
+                req.from_user_id,
+                subject=f"You're in! {current_user.full_name} accepted you to \"{title}\"",
+                headline=f'{current_user.full_name} accepted your request to join "{title}"',
+                path=f"/projects/{req.idea_id}/discussion",
+                cta_label="Say hello to the team",
+            )
 
     # Accepting adds the requester to the project group (no DM). The response's
     # conversation_id stays null.
@@ -200,9 +218,9 @@ async def _resolve_collab(
 
 @router.post("/collaboration-requests/{request_id}/accept", response_model=CollaborationRequestOut)
 async def accept_collab(
-    request_id: int, db: DbSession, current_user: CurrentUser
+    request_id: int, db: DbSession, current_user: CurrentUser, background_tasks: BackgroundTasks
 ) -> CollaborationRequest:
-    return await _resolve_collab(request_id, "accepted", db, current_user)
+    return await _resolve_collab(request_id, "accepted", db, current_user, background_tasks)
 
 
 @router.post("/collaboration-requests/{request_id}/decline", response_model=CollaborationRequestOut)
@@ -350,6 +368,7 @@ async def send_message(
     payload: MessageCreate,
     db: DbSession,
     current_user: CurrentUser,
+    background_tasks: BackgroundTasks,
 ) -> Message:
     convo = await _get_convo_or_404(conversation_id, db, current_user.id)
     msg = Message(
@@ -365,6 +384,15 @@ async def send_message(
 
     other_id = convo.user_b_id if convo.user_a_id == current_user.id else convo.user_a_id
     await push_message(other_id, conversation_id, msg)
+    background_tasks.add_task(
+        send_activity_email,
+        other_id,
+        subject=f"New message from {current_user.full_name}",
+        headline=f"{current_user.full_name} sent you a message",
+        preview=payload.body,
+        path="/messages",
+        cta_label="Reply",
+    )
     return msg
 
 

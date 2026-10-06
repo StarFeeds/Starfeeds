@@ -294,6 +294,16 @@ export const api = {
     },
   },
 
+  email: {
+    /** One-click unsubscribe from activity emails (token from the email link; no login). */
+    unsubscribe: async (token: string): Promise<{ email: string }> => {
+      return apiCall<{ email: string }>("/email/unsubscribe", {
+        method: "POST",
+        body: JSON.stringify({ token }),
+      });
+    },
+  },
+
   links: {
     /** Whether a link can be shown inside LikeMinds (iframe) or must open in a new tab. */
     check: async (url: string): Promise<LinkCheck> => {

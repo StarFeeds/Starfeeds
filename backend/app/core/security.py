@@ -8,7 +8,7 @@ from app.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-TokenType = Literal["access", "refresh"]
+TokenType = Literal["access", "refresh", "unsubscribe"]
 
 
 def hash_password(password: str) -> str:
@@ -40,6 +40,11 @@ def create_refresh_token(subject: str | int) -> str:
     return _create_token(
         subject, "refresh", timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
+
+
+def create_unsubscribe_token(subject: str | int) -> str:
+    """Long-lived token for one-click "stop activity emails" links."""
+    return _create_token(subject, "unsubscribe", timedelta(days=365))
 
 
 def decode_token(token: str, expected_type: TokenType) -> str | None:

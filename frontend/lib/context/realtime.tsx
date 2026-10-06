@@ -127,6 +127,14 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     };
   }, [isAuthenticated]);
 
+  // Show unread activity in the browser tab, e.g. "(3) LikeMinds", so people
+  // with the tab in the background notice something new.
+  const totalUnread = unreadNotifications + unreadMessages;
+  useEffect(() => {
+    const base = document.title.replace(/^\(\d+\+?\)\s*/, "");
+    document.title = totalUnread > 0 ? `(${totalUnread > 99 ? "99+" : totalUnread}) ${base}` : base;
+  }, [totalUnread]);
+
   return (
     <RealtimeContext.Provider
       value={{

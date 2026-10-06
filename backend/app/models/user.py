@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import sqlalchemy as sa
-from sqlalchemy import JSON, String, Text
+from datetime import datetime
+
+from sqlalchemy import JSON, DateTime, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -15,6 +17,8 @@ DEFAULT_NOTIFICATION_PREFS: dict[str, bool] = {
     "important": True,
     "public_profile": True,
     "show_online": True,
+    # Email me when someone comments, asks to join, accepts, or messages me.
+    "email_activity": True,
 }
 
 
@@ -42,6 +46,10 @@ class User(Base, TimestampMixin):
     notification_prefs: Mapped[dict] = mapped_column(
         JSON, default=lambda: dict(DEFAULT_NOTIFICATION_PREFS)
     )
+    # When we last sent an activity email (throttles them; see app/activity_email.py).
+    last_activity_email_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     @property
     def show_online_status(self) -> bool:
@@ -57,6 +65,10 @@ class User(Base, TimestampMixin):
         if key is None:
             return True  # e.g. "upvote" has no toggle — always deliver
         return bool((self.notification_prefs or {}).get(key, True))
+
+    @property
+    def wants_activity_email(self) -> bool:
+        return bool((self.notification_prefs or {}).get("email_activity", True))
 
     ideas: Mapped[list["Idea"]] = relationship(
         back_populates="author", cascade="all, delete-orphan"

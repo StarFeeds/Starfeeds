@@ -79,6 +79,7 @@ export default function SettingsPage() {
     announcements: np.announcements ?? true,
     weekly: np.weekly ?? true,
     important: np.important ?? true,
+    email_activity: np.email_activity ?? true,
   });
   const [visibility, setVisibility] = useState({
     publicProfile: np.public_profile ?? true,
@@ -205,6 +206,11 @@ export default function SettingsPage() {
 
         <h3 className="font-bold text-neutral-900 mt-5 mb-1">Email Preferences</h3>
         <div className="divide-y divide-neutral-100">
+          <ToggleRow
+            label="Activity emails (comments, join requests, messages)"
+            value={prefs.email_activity}
+            onChange={() => toggle("email_activity")}
+          />
           <ToggleRow label="Weekly Digests" value={prefs.weekly} onChange={() => toggle("weekly")} comingSoon />
           <ToggleRow label="Important Updates" value={prefs.important} onChange={() => toggle("important")} comingSoon />
         </div>

@@ -30,6 +30,10 @@ class ConnectionManager:
             if not self._conns[user_id]:
                 self._conns.pop(user_id, None)
 
+    def is_connected(self, user_id: int) -> bool:
+        """Whether the user has LikeMinds open right now (a live socket)."""
+        return bool(self._conns.get(user_id))
+
     async def send_to_user(self, user_id: int, payload: dict[str, Any]) -> None:
         for ws in list(self._conns.get(user_id, ())):
             try:
