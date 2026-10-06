@@ -160,11 +160,17 @@ async def main():
     st, outgoing = get("/collaboration-requests?box=outgoing", c_tok)
     check("outgoing collab list", st == 200 and any(r["id"] == interest["id"] for r in outgoing))
 
-    # Accept -> conversation created
+    # Accept -> requester joins the project's group (no DM is created)
     st, accepted = post(f"/collaboration-requests/{interest['id']}/accept", None, a_tok)
-    check("accept creates conversation", st == 200 and accepted["status"] == "accepted"
-          and accepted.get("conversation_id"), accepted)
-    convo_id = accepted["conversation_id"]
+    check("accept request", st == 200 and accepted["status"] == "accepted", accepted)
+    st, members = get(f"/ideas/{bs_idea['id']}/members", a_tok)
+    check("requester joins project group", st == 200 and any(m["id"] == me_c["id"] for m in members),
+          [m["id"] for m in members] if isinstance(members, list) else members)
+
+    # Direct messages are opened explicitly
+    st, convo = post("/conversations", {"user_id": me_c["id"]}, a_tok)
+    check("open conversation", st in (200, 201) and convo.get("id"), convo)
+    convo_id = convo["id"]
     st, a_convos = get("/conversations", a_tok)
     check("conversation appears for accepter", any(c["id"] == convo_id for c in a_convos))
     st, c_convos = get("/conversations", c_tok)
