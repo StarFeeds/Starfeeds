@@ -14,7 +14,7 @@ INSECURE_SECRETS = {
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    PROJECT_NAME: str = "StarFeeds API"
+    PROJECT_NAME: str = "LikeMinds API"
     API_V1_PREFIX: str = "/api/v1"
     # "development" | "production"
     ENVIRONMENT: str = "development"
@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str | None = None
     SMTP_STARTTLS: bool = True
     EMAIL_FROM: str | None = None
-    EMAIL_FROM_NAME: str = "StarFeeds"
+    EMAIL_FROM_NAME: str = "LikeMinds"
 
     @property
     def smtp_configured(self) -> bool:
@@ -69,18 +69,21 @@ class Settings(BaseSettings):
 
         - postgres://...      -> postgresql+asyncpg://...
         - postgresql://...    -> postgresql+asyncpg://...
-        Also strips the libpq-only `sslmode` query param, which asyncpg rejects.
+        Also strips the libpq-only `sslmode` and `channel_binding` query params
+        (Neon adds both): asyncpg forwards unknown params to the server as
+        settings, which Postgres rejects. asyncpg still negotiates SSL by default.
         """
         if v.startswith("postgres://"):
             v = "postgresql+asyncpg://" + v[len("postgres://"):]
         elif v.startswith("postgresql://"):
             v = "postgresql+asyncpg://" + v[len("postgresql://"):]
 
-        if v.startswith("postgresql+asyncpg://") and "sslmode=" in v:
-            # Drop sslmode=... (and a trailing ?/& if it becomes empty).
+        if v.startswith("postgresql+asyncpg://"):
             import re
 
-            v = re.sub(r"([?&])sslmode=[^&]*(&)?", lambda m: m.group(1) if m.group(2) else "", v)
+            for param in ("sslmode", "channel_binding"):
+                # Drop param=... (and a trailing ?/& if it becomes empty).
+                v = re.sub(rf"([?&]){param}=[^&]*(&)?", lambda m: m.group(1) if m.group(2) else "", v)
             v = v.rstrip("?&")
         return v
 

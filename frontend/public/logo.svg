@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="3 11 58 42" role="img" aria-label="LikeMinds">
+  <!-- Two minds (circles) meeting; the shared overlap is the idea. -->
+  <circle cx="24" cy="32" r="20" fill="#4d0695"/>
+  <circle cx="40" cy="32" r="20" fill="#7e2bd1"/>
+  <path d="M32 13.67A20 20 0 0 1 32 50.33A20 20 0 0 1 32 13.67Z" fill="#c590fb"/>
+</svg>

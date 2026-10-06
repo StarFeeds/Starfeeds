@@ -32,7 +32,7 @@ export function OnboardingChecklist({
         </svg>
       </button>
 
-      <h2 className="font-bold text-neutral-900">Welcome to IdeaBank 👋</h2>
+      <h2 className="font-bold text-neutral-900">Welcome to LikeMinds 👋</h2>
       <p className="text-sm text-neutral-600 mt-0.5 mb-3">
         {doneCount}/{steps.length} done — finish setting up to get discovered.
       </p>

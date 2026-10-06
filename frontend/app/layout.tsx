@@ -4,7 +4,7 @@ import { AuthProvider } from "@/lib/context/auth";
 import { RealtimeProvider } from "@/lib/context/realtime";
 
 export const metadata: Metadata = {
-  title: "StarFeeds",
+  title: "LikeMinds",
   description: "Idea bank and social platform",
 };
 

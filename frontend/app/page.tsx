@@ -111,7 +111,7 @@ export default function LandingPage() {
         </section>
 
         <footer className="border-t border-neutral-200 py-8 text-center text-xs text-neutral-500">
-          © StarFeeds — build together.
+          © LikeMinds — build together.
         </footer>
       </div>
 

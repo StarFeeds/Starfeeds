@@ -160,7 +160,7 @@ export default function LoginPage() {
           </div>
         </div>
         <footer className="py-6 text-center text-xs text-neutral-500">
-          © Starfeeds Technology 2025
+          © LikeMinds 2026
         </footer>
       </div>
     </div>

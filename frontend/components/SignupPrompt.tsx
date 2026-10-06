@@ -26,7 +26,7 @@ export function SignupPrompt({
         <div className="flex justify-center mb-4">
           <Logo size={44} />
         </div>
-        <h2 className="text-lg font-bold text-neutral-900">Join StarFeeds to {action}</h2>
+        <h2 className="text-lg font-bold text-neutral-900">Join LikeMinds to {action}</h2>
         <p className="text-sm text-neutral-600 mt-1 mb-5">
           Create a free account to join projects, comment, and collaborate with builders.
         </p>
