@@ -7,6 +7,9 @@ import { api } from "@/lib/api/client";
 import type { Comment, Idea } from "@/lib/api/types";
 import { useAuth } from "@/lib/context/auth";
 import { Avatar } from "@/components/Avatar";
+import { LinkViewer } from "@/components/LinkViewer";
+import { MakePostModal } from "@/components/MakePostModal";
+import { hostOf, parseSections, splitLinks } from "@/lib/ideaBody";
 
 interface IdeaCardProps {
   idea: Idea;
@@ -42,37 +45,39 @@ function timeAgo(iso: string): string {
   return `${value}${unit} ago`;
 }
 
-type BodySection = { label: string | null; text: string };
-
-/**
- * Split a body written as "**Problem** ... **Solution** ..." into labeled
- * sections. Returns null when there are no ** ** markers (plain body).
- */
-function parseSections(body: string): BodySection[] | null {
-  const re = /\*\*\s*(.+?)\s*\*\*/g;
-  const sections: BodySection[] = [];
-  let match: RegExpExecArray | null;
-  let lastEnd = 0;
-  let pendingLabel: string | null = null;
-
-  while ((match = re.exec(body)) !== null) {
-    const between = body.slice(lastEnd, match.index).trim();
-    if (pendingLabel !== null || between) {
-      sections.push({ label: pendingLabel, text: between });
-    }
-    pendingLabel = match[1].trim();
-    lastEnd = re.lastIndex;
-  }
-
-  if (pendingLabel === null) return null; // no markers at all
-
-  const tail = body.slice(lastEnd).trim();
-  sections.push({ label: pendingLabel, text: tail });
-  return sections.filter((s) => s.label || s.text);
+/** Text with any http(s) URLs turned into links that open in the in-app viewer. */
+function Linkified({ text, onOpen }: { text: string; onOpen: (url: string) => void }) {
+  return (
+    <>
+      {splitLinks(text).map((p, i) =>
+        p.url ? (
+          <a
+            key={i}
+            href={p.url}
+            onClick={(e) => {
+              e.preventDefault();
+              onOpen(p.url!);
+            }}
+            className="text-primary-700 font-medium underline decoration-primary-300 underline-offset-2 hover:decoration-primary-700 break-all"
+          >
+            {p.text}
+          </a>
+        ) : (
+          p.text
+        ),
+      )}
+    </>
+  );
 }
 
-export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
+export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete }: IdeaCardProps) {
   const { user } = useAuth();
+  // Fields the author changed via Edit; layered over the prop so parent-driven
+  // updates (upvotes, saves) still flow through.
+  const [edits, setEdits] = useState<Partial<Idea> | null>(null);
+  const idea: Idea = edits ? { ...ideaProp, ...edits } : ideaProp;
+  const [editOpen, setEditOpen] = useState(false);
+  const [viewingUrl, setViewingUrl] = useState<string | null>(null);
   const router = useRouter();
   const isOwner = user?.id === idea.author.id;
   const [loading, setLoading] = useState(false);
@@ -161,6 +166,10 @@ export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
 
   const openDiscussion = () => router.push(`/projects/${idea.id}/discussion`);
 
+  const wasEdited =
+    !!idea.updated_at &&
+    new Date(idea.updated_at).getTime() - new Date(idea.created_at).getTime() > 60_000;
+
   const sections = parseSections(idea.body);
   const isLong = idea.body.length > 150;
   const bodyText = expanded || !isLong ? idea.body : idea.body.slice(0, 150).trimEnd();
@@ -184,6 +193,7 @@ export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
             <p className="text-xs text-neutral-600">{idea.author.headline}</p>
             <p className="text-xs text-neutral-500 mt-0.5 flex items-center gap-1.5">
               Posted {timeAgo(idea.created_at)}
+              {wasEdited && <span className="text-neutral-400">· edited</span>}
               <svg className="w-3.5 h-3.5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -207,6 +217,18 @@ export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                 <div className="absolute right-0 top-8 z-20 w-40 bg-white border border-neutral-200 rounded-xl shadow-lg py-1">
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setEditOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit idea
+                  </button>
                   <button
                     onClick={handleDelete}
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm font-semibold text-destructive-500 hover:bg-destructive-500/5 transition"
@@ -241,7 +263,7 @@ export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
               )}
               {s.text && (
                 <p className="text-neutral-700 text-sm leading-relaxed whitespace-pre-line">
-                  {s.text}
+                  <Linkified text={s.text} onOpen={setViewingUrl} />
                 </p>
               )}
             </div>
@@ -257,7 +279,7 @@ export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
         </div>
       ) : (
         <p className="text-neutral-700 text-sm leading-relaxed mb-4 whitespace-pre-line">
-          {bodyText}
+          <Linkified text={bodyText} onOpen={setViewingUrl} />
           {isLong && !expanded && "… "}
           {isLong && (
             <button
@@ -268,6 +290,32 @@ export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
             </button>
           )}
         </p>
+      )}
+
+      {idea.project_url && (
+        <a
+          href={idea.project_url}
+          onClick={(e) => {
+            e.preventDefault();
+            setViewingUrl(idea.project_url);
+          }}
+          className="mb-4 flex items-center gap-3 p-3 rounded-xl border border-neutral-200 hover:border-primary-400 hover:bg-primary-50/40 transition group"
+        >
+          <span className="w-9 h-9 flex-shrink-0 rounded-lg bg-primary-50 flex items-center justify-center">
+            <svg className="w-5 h-5 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+            </svg>
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs font-semibold text-success-500 uppercase tracking-wide">Live project</span>
+            <span className="block text-sm font-semibold text-neutral-900 truncate group-hover:text-primary-700">
+              {hostOf(idea.project_url)}
+            </span>
+          </span>
+          <svg className="w-4 h-4 text-neutral-400 group-hover:text-primary-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
       )}
 
       {/* Stats */}
@@ -403,6 +451,25 @@ export function IdeaCard({ idea, onUpvote, onSave, onDelete }: IdeaCardProps) {
           </form>
         </div>
       )}
+
+      {isOwner && editOpen && (
+        <MakePostModal
+          open
+          idea={idea}
+          onClose={() => setEditOpen(false)}
+          onSaved={(updated) =>
+            setEdits({
+              title: updated.title,
+              body: updated.body,
+              category: updated.category,
+              visibility: updated.visibility,
+              project_url: updated.project_url,
+              updated_at: updated.updated_at,
+            })
+          }
+        />
+      )}
+      {viewingUrl && <LinkViewer url={viewingUrl} onClose={() => setViewingUrl(null)} />}
     </div>
   );
 }

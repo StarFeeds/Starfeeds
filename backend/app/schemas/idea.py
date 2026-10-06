@@ -1,8 +1,25 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from urllib.parse import urlparse
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.user import UserPublic
+
+
+def _clean_project_url(v: str | None) -> str | None:
+    """Blank -> None; bare domains get https://; only http(s) URLs allowed."""
+    if v is None:
+        return None
+    v = v.strip()
+    if not v:
+        return None
+    if "://" not in v:
+        v = "https://" + v
+    parsed = urlparse(v)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname or "." not in parsed.hostname:
+        raise ValueError("Enter a valid web link, e.g. https://myproject.com")
+    return v
 
 
 class IdeaCreate(BaseModel):
@@ -10,6 +27,22 @@ class IdeaCreate(BaseModel):
     body: str = Field(min_length=1)
     category: str = Field(default="General", max_length=80)
     visibility: str = Field(default="public", pattern="^(public|private)$")
+    project_url: str | None = Field(default=None, max_length=500)
+
+    _url = field_validator("project_url")(_clean_project_url)
+
+
+class IdeaUpdate(BaseModel):
+    """Partial update by the author; omitted fields are left unchanged.
+    Send project_url as "" or null to remove the link."""
+
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    body: str | None = Field(default=None, min_length=1)
+    category: str | None = Field(default=None, max_length=80)
+    visibility: str | None = Field(default=None, pattern="^(public|private)$")
+    project_url: str | None = Field(default=None, max_length=500)
+
+    _url = field_validator("project_url")(_clean_project_url)
 
 
 class IdeaOut(BaseModel):
@@ -20,7 +53,9 @@ class IdeaOut(BaseModel):
     body: str
     category: str
     visibility: str
+    project_url: str | None = None
     created_at: datetime
+    updated_at: datetime
     author: UserPublic
 
     # Aggregates / per-viewer state (populated in the route layer)

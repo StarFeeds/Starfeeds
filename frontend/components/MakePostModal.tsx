@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api/client";
+import type { Idea } from "@/lib/api/types";
+import { DETAIL_FIELDS, EMPTY_DETAILS, composeBody, splitBody } from "@/lib/ideaBody";
 
 const CATEGORIES = [
   "Artificial Intelligence",
@@ -12,38 +14,42 @@ const CATEGORIES = [
   "Other",
 ];
 
-/** Optional structured prompts, folded behind "Add more detail". */
-const DETAIL_FIELDS = [
-  { key: "problem", heading: "Problem", placeholder: "What problem are you solving?" },
-  { key: "audience", heading: "Target Audience", placeholder: "Who is it for?" },
-  { key: "revenue", heading: "Revenue Model", placeholder: "How could it make money?" },
-] as const;
-
-type DetailKey = (typeof DETAIL_FIELDS)[number]["key"];
 type Visibility = "public" | "private";
-
-const EMPTY_DETAILS: Record<DetailKey, string> = { problem: "", audience: "", revenue: "" };
 
 interface MakePostModalProps {
   open: boolean;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated?: () => void;
+  /** When set, the modal edits this idea instead of creating a new one.
+   *  Mount it only while open so it picks up the idea's current values. */
+  idea?: Idea;
+  onSaved?: (idea: Idea) => void;
 }
 
 /**
  * "Share what you're working on" composer. Only a title and a short
  * description are required; category, visibility and the structured
  * details are optional. The backend stores title / body / category /
- * visibility, so any filled-in details are appended to the body as
- * headed sections.
+ * visibility / project_url, so any filled-in details are appended to the
+ * body as headed sections.
  */
-export function MakePostModal({ open, onClose, onCreated }: MakePostModalProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<string | null>(null);
-  const [visibility, setVisibility] = useState<Visibility>("public");
-  const [showDetails, setShowDetails] = useState(false);
-  const [details, setDetails] = useState(EMPTY_DETAILS);
+export function MakePostModal({ open, onClose, onCreated, idea, onSaved }: MakePostModalProps) {
+  const editing = !!idea;
+  // When editing, the modal is mounted on open, so the idea seeds initial state.
+  const [initial] = useState(() => (idea ? splitBody(idea.body) : null));
+  const [title, setTitle] = useState(idea?.title ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [projectUrl, setProjectUrl] = useState(idea?.project_url ?? "");
+  const [category, setCategory] = useState<string | null>(
+    idea && CATEGORIES.includes(idea.category) ? idea.category : null,
+  );
+  const [visibility, setVisibility] = useState<Visibility>(
+    idea?.visibility === "private" ? "private" : "public",
+  );
+  const [details, setDetails] = useState(initial?.details ?? EMPTY_DETAILS);
+  const [showDetails, setShowDetails] = useState(
+    !!initial && Object.values(initial.details).some(Boolean),
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,6 +67,7 @@ export function MakePostModal({ open, onClose, onCreated }: MakePostModalProps) 
   const reset = () => {
     setTitle("");
     setDescription("");
+    setProjectUrl("");
     setCategory(null);
     setVisibility("public");
     setShowDetails(false);
@@ -74,24 +81,28 @@ export function MakePostModal({ open, onClose, onCreated }: MakePostModalProps) 
       setError("Add a name and a short description to post.");
       return;
     }
-    const body = [
-      description.trim(),
-      ...DETAIL_FIELDS.map(({ key, heading }) =>
-        details[key].trim() ? `**${heading}**\n${details[key].trim()}` : null,
-      ),
-    ]
-      .filter(Boolean)
-      .join("\n\n");
+    const input = {
+      title: title.trim(),
+      body: composeBody(description, details),
+      // Keep a category we don't offer as a chip (e.g. older posts) unless changed.
+      category: category ?? (idea && !CATEGORIES.includes(idea.category) ? idea.category : "General"),
+      visibility,
+      project_url: projectUrl.trim(),
+    };
 
     setSubmitting(true);
     setError(null);
     try {
-      await api.ideas.create(title.trim(), body, category ?? "General", visibility);
-      reset();
-      onCreated();
+      if (idea) {
+        onSaved?.(await api.ideas.update(idea.id, input));
+      } else {
+        await api.ideas.create({ ...input, project_url: input.project_url || null });
+        reset();
+        onCreated?.();
+      }
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to post idea");
+      setError(err instanceof Error ? err.message : editing ? "Failed to save changes" : "Failed to post idea");
     } finally {
       setSubmitting(false);
     }
@@ -108,7 +119,7 @@ export function MakePostModal({ open, onClose, onCreated }: MakePostModalProps) 
       <div className="w-full max-w-xl bg-white rounded-2xl shadow-md">
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
           <h2 className="font-bold text-lg text-neutral-900">
-            Share what you&apos;re working on
+            {editing ? "Edit your idea" : <>Share what you&apos;re working on</>}
           </h2>
           <button
             onClick={onClose}
@@ -146,6 +157,27 @@ export function MakePostModal({ open, onClose, onCreated }: MakePostModalProps) 
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
+
+          <div className="relative">
+            <svg
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+            <input
+              type="text"
+              inputMode="url"
+              aria-label="Project link"
+              className={`${fieldCls} h-11 pl-10`}
+              placeholder="Link to your project, if it's live (optional)"
+              maxLength={500}
+              value={projectUrl}
+              onChange={(e) => setProjectUrl(e.target.value)}
+            />
+          </div>
 
           <div>
             <p className="text-xs font-semibold text-neutral-500 mb-2">Category (optional)</p>
@@ -222,7 +254,7 @@ export function MakePostModal({ open, onClose, onCreated }: MakePostModalProps) 
               disabled={submitting || !canPost}
               className="inline-flex items-center gap-2 px-8 h-11 mt-3 bg-neutral-900 hover:bg-neutral-700 disabled:bg-neutral-300 disabled:cursor-not-allowed text-white font-semibold rounded-full transition"
             >
-              {submitting ? "Posting..." : "Post"}
+              {submitting ? (editing ? "Saving..." : "Posting...") : editing ? "Save changes" : "Post"}
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>

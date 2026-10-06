@@ -2,7 +2,9 @@ import {
   TokenPair,
   User,
   Idea,
+  IdeaInput,
   IdeaListResponse,
+  LinkCheck,
   Comment,
   Notification,
   CollaborationRequest,
@@ -256,15 +258,19 @@ export const api = {
       });
     },
 
-    create: async (
-      title: string,
-      body: string,
-      category: string,
-      visibility: "public" | "private" = "public",
-    ): Promise<Idea> => {
+    create: async (input: IdeaInput): Promise<Idea> => {
       return apiCall<Idea>("/ideas", {
         method: "POST",
-        body: JSON.stringify({ title, body, category, visibility }),
+        body: JSON.stringify(input),
+        requiresAuth: true,
+      });
+    },
+
+    /** Author-only partial update. Pass project_url: "" to remove the link. */
+    update: async (ideaId: number, patch: Partial<IdeaInput>): Promise<Idea> => {
+      return apiCall<Idea>(`/ideas/${ideaId}`, {
+        method: "PATCH",
+        body: JSON.stringify(patch),
         requiresAuth: true,
       });
     },
@@ -285,6 +291,15 @@ export const api = {
 
     remove: async (ideaId: number): Promise<void> => {
       await apiCall<void>(`/ideas/${ideaId}`, { method: "DELETE", requiresAuth: true });
+    },
+  },
+
+  links: {
+    /** Whether a link can be shown inside LikeMinds (iframe) or must open in a new tab. */
+    check: async (url: string): Promise<LinkCheck> => {
+      return apiCall<LinkCheck>(`/links/check?url=${encodeURIComponent(url)}`, {
+        requiresAuth: true,
+      });
     },
   },
 

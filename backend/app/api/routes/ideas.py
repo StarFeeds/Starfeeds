@@ -19,6 +19,7 @@ from app.schemas.idea import (
     IdeaCreate,
     IdeaListResponse,
     IdeaOut,
+    IdeaUpdate,
 )
 from app.realtime import push_notification
 from app.schemas.social import CollaborationRequestOut
@@ -148,6 +149,7 @@ async def create_idea(
         body=payload.body,
         category=payload.category,
         visibility=payload.visibility,
+        project_url=payload.project_url,
         author_id=current_user.id,
     )
     db.add(idea)
@@ -166,6 +168,27 @@ async def _get_idea_or_404(db: DbSession, idea_id: int) -> Idea:
     if idea is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Idea not found")
     return idea
+
+
+@router.patch("/{idea_id}", response_model=IdeaOut)
+async def update_idea(
+    idea_id: int, payload: IdeaUpdate, db: DbSession, current_user: CurrentUser
+) -> IdeaOut:
+    idea = await _get_idea_or_404(db, idea_id)
+    if idea.author_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only edit your own ideas",
+        )
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        # project_url may be cleared; the other fields can't be null.
+        if value is None and field != "project_url":
+            continue
+        setattr(idea, field, value)
+    await db.commit()
+    await db.refresh(idea)
+    await db.refresh(idea, attribute_names=["author"])
+    return await _serialize(db, idea, current_user.id)
 
 
 @router.delete("/{idea_id}", status_code=status.HTTP_204_NO_CONTENT)

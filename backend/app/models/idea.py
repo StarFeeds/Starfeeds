@@ -20,6 +20,8 @@ class Idea(Base, TimestampMixin):
     body: Mapped[str] = mapped_column(Text)
     category: Mapped[str] = mapped_column(String(80), default="General", index=True)
     visibility: Mapped[str] = mapped_column(String(20), default="public")
+    # Optional link to the live project (site, app store page, demo...).
+    project_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # Admin-moderation: hidden ideas are excluded from public feed & search.
     hidden: Mapped[bool] = mapped_column(default=False, server_default=sa.false())
 

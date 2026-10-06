@@ -99,7 +99,9 @@ export interface Idea {
   body: string;
   category: string;
   visibility: string;
+  project_url: string | null;
   created_at: string;
+  updated_at: string;
   author: User;
   upvote_count: number;
   comment_count: number;
@@ -108,6 +110,20 @@ export interface Idea {
   hidden?: boolean;
   member_count: number;
   join_status: "none" | "pending" | "member" | "owner";
+}
+
+export interface IdeaInput {
+  title: string;
+  body: string;
+  category: string;
+  visibility: "public" | "private";
+  project_url?: string | null;
+}
+
+export interface LinkCheck {
+  url: string;
+  embeddable: boolean;
+  reachable: boolean;
 }
 
 export interface GroupMessage {
