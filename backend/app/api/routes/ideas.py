@@ -151,6 +151,7 @@ async def create_idea(
         category=payload.category,
         visibility=payload.visibility,
         project_url=payload.project_url,
+        looking_for=payload.looking_for or None,
         author_id=current_user.id,
     )
     db.add(idea)
@@ -171,6 +172,17 @@ async def _get_idea_or_404(db: DbSession, idea_id: int) -> Idea:
     return idea
 
 
+@router.get("/{idea_id}", response_model=IdeaOut)
+async def get_idea(idea_id: int, db: DbSession, viewer: OptionalUser) -> IdeaOut:
+    """One idea, for its shareable page. Public ideas are visible to anyone;
+    members-only ideas need a login; hidden ones only to their author."""
+    idea = await _get_idea_or_404(db, idea_id)
+    is_author = viewer is not None and viewer.id == idea.author_id
+    if (idea.hidden and not is_author) or (idea.visibility != "public" and viewer is None):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Idea not found")
+    return await _serialize(db, idea, viewer.id if viewer else None)
+
+
 @router.patch("/{idea_id}", response_model=IdeaOut)
 async def update_idea(
     idea_id: int, payload: IdeaUpdate, db: DbSession, current_user: CurrentUser
@@ -182,8 +194,8 @@ async def update_idea(
             detail="You can only edit your own ideas",
         )
     for field, value in payload.model_dump(exclude_unset=True).items():
-        # project_url may be cleared; the other fields can't be null.
-        if value is None and field != "project_url":
+        # project_url / looking_for may be cleared; the other fields can't be null.
+        if value is None and field not in ("project_url", "looking_for"):
             continue
         setattr(idea, field, value)
     await db.commit()

@@ -9,6 +9,8 @@ import { useAuth } from "@/lib/context/auth";
 import { Avatar } from "@/components/Avatar";
 import { LinkViewer } from "@/components/LinkViewer";
 import { MakePostModal } from "@/components/MakePostModal";
+import { ShareButton } from "@/components/ShareMenu";
+import { ideaPath } from "@/lib/share";
 import { hostOf, parseSections, splitLinks } from "@/lib/ideaBody";
 
 interface IdeaCardProps {
@@ -17,6 +19,9 @@ interface IdeaCardProps {
   onSave: (ideaId: number) => Promise<void>;
   /** Called after the author deletes this idea, so the parent can drop it. */
   onDelete?: (ideaId: number) => void;
+  /** Logged-out viewer (public idea page): actions call this instead, e.g. to
+   *  show a sign-up prompt. Sharing still works. */
+  onGuestAction?: (action: string) => void;
 }
 
 function timeAgo(iso: string): string {
@@ -70,7 +75,7 @@ function Linkified({ text, onOpen }: { text: string; onOpen: (url: string) => vo
   );
 }
 
-export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete }: IdeaCardProps) {
+export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete, onGuestAction }: IdeaCardProps) {
   const { user } = useAuth();
   // Fields the author changed via Edit; layered over the prop so parent-driven
   // updates (upvotes, saves) still flow through.
@@ -119,6 +124,10 @@ export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete }: IdeaCar
       setDeleting(false);
     }
   };
+
+  /** For guests, swap an action for the sign-up prompt. */
+  const gate = <A extends unknown[]>(action: string, fn: (...a: A) => unknown) =>
+    (...a: A) => (onGuestAction ? onGuestAction(action) : fn(...a));
 
   const toggleComments = async () => {
     const next = !showComments;
@@ -246,10 +255,24 @@ export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete }: IdeaCar
       </div>
 
       {/* Title + category */}
-      <h3 className="font-bold text-lg text-neutral-900 mb-1">{idea.title}</h3>
+      <h3 className="font-bold text-lg text-neutral-900 mb-1">
+        <Link href={ideaPath(idea)} className="hover:text-primary-700 transition">
+          {idea.title}
+        </Link>
+      </h3>
       <p className="text-xs font-bold text-secondary-700 uppercase tracking-wide mb-3">
         {idea.category}
       </p>
+      {idea.looking_for?.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          <span className="text-xs font-semibold text-neutral-500">Looking for</span>
+          {idea.looking_for.map((role) => (
+            <span key={role} className="px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 text-xs font-semibold">
+              {role}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Body */}
       {sections ? (
@@ -336,7 +359,7 @@ export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete }: IdeaCar
             {idea.member_count} {idea.member_count === 1 ? "member" : "members"}
           </span>
         </div>
-        <button onClick={toggleComments} className="hover:text-neutral-900 transition">
+        <button onClick={gate("see comments", toggleComments)} className="hover:text-neutral-900 transition">
           {commentCount} Comments
         </button>
       </div>
@@ -344,7 +367,7 @@ export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete }: IdeaCar
       {/* Actions */}
       <div className="flex items-center justify-between border-t border-neutral-200 pt-2">
         <button
-          onClick={run(() => onUpvote(idea.id))}
+          onClick={gate("upvote", run(() => onUpvote(idea.id)))}
           disabled={loading}
           className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition ${
             idea.upvoted_by_me
@@ -355,16 +378,16 @@ export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete }: IdeaCar
           <svg className="w-5 h-5" fill={idea.upvoted_by_me ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
           </svg>
-          Upvote
+          <span className="hidden sm:inline">Upvote</span>
         </button>
         <button
-          onClick={toggleComments}
+          onClick={gate("comment", toggleComments)}
           className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-neutral-600 hover:bg-neutral-100 transition"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2h-3l-4 4z" />
           </svg>
-          Comment
+          <span className="hidden sm:inline">Comment</span>
         </button>
         {joinStatus === "member" || joinStatus === "owner" ? (
           <button
@@ -374,22 +397,24 @@ export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete }: IdeaCar
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l3.586-3.586z" />
             </svg>
-            Discussion
+            <span className="hidden sm:inline">Discussion</span>
           </button>
         ) : (
           <button
-            onClick={requestJoin}
+            onClick={gate("request to join this project", requestJoin)}
             disabled={joining || joinStatus === "pending"}
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-neutral-600 hover:bg-neutral-100 disabled:opacity-60 transition"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
             </svg>
-            {joinStatus === "pending" ? "Requested" : joining ? "Requesting…" : "Request to Join"}
+            <span className="hidden sm:inline">
+              {joinStatus === "pending" ? "Requested" : joining ? "Requesting…" : "Request to Join"}
+            </span>
           </button>
         )}
         <button
-          onClick={run(() => onSave(idea.id))}
+          onClick={gate("save projects", run(() => onSave(idea.id)))}
           disabled={loading}
           className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition ${
             idea.saved_by_me ? "text-primary-600" : "text-neutral-600 hover:bg-neutral-100"
@@ -398,8 +423,12 @@ export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete }: IdeaCar
           <svg className="w-5 h-5" fill={idea.saved_by_me ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
           </svg>
-          Save
+          <span className="hidden sm:inline">Save</span>
         </button>
+        <ShareButton
+          idea={idea}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-neutral-600 hover:bg-neutral-100 transition"
+        />
       </div>
 
       {actionError && (

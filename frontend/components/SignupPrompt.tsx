@@ -2,16 +2,20 @@
 
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { withNext } from "@/lib/share";
 
 /** Shown when a logged-out visitor tries to interact with a project. */
 export function SignupPrompt({
   open,
   onClose,
   action = "do that",
+  next,
 }: {
   open: boolean;
   onClose: () => void;
   action?: string;
+  /** Where to return after signing up / logging in. */
+  next?: string;
 }) {
   if (!open) return null;
   return (
@@ -32,13 +36,13 @@ export function SignupPrompt({
         </p>
         <div className="space-y-2">
           <Link
-            href="/register"
+            href={withNext("/register", next)}
             className="block w-full h-11 leading-[44px] bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-full transition"
           >
             Sign up — it&apos;s free
           </Link>
           <Link
-            href="/login"
+            href={withNext("/login", next)}
             className="block w-full h-11 leading-[44px] border border-neutral-300 text-neutral-700 hover:bg-neutral-50 text-sm font-semibold rounded-full transition"
           >
             Log in

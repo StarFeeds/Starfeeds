@@ -240,6 +240,11 @@ export const api = {
       return apiCall<IdeaListResponse>(`/ideas?${params}`);
     },
 
+    /** One idea (its shareable page). Pass auth=true when logged in for per-viewer state. */
+    get: async (ideaId: number, auth = false): Promise<Idea> => {
+      return apiCall<Idea>(`/ideas/${ideaId}`, { requiresAuth: auth });
+    },
+
     listComments: async (ideaId: number): Promise<Comment[]> => {
       return apiCall<Comment[]>(`/ideas/${ideaId}/comments`, { requiresAuth: true });
     },

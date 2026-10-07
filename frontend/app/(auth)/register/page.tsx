@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { nextPath, withNext } from "@/lib/share";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/context/auth";
 import { AuthHero, SocialButtons, OrDivider } from "@/components/auth-ui";
@@ -58,7 +59,7 @@ export default function RegisterPage() {
     try {
       await api.auth.register(email, deriveUsername(email), fullName, password, whatsapp.trim() || undefined);
       await refetchUser();
-      router.push("/home");
+      router.push(nextPath());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -220,7 +221,18 @@ export default function RegisterPage() {
 
               <p className="text-center text-sm text-neutral-600">
                 Already have an account?{" "}
-                <Link href="/login" className="text-primary-600 hover:text-primary-700 font-semibold">
+                <Link
+                  href="/login"
+                  onClick={(e) => {
+                    // Carry ?next= across so sign-up/login returns to the shared idea.
+                    const next = nextPath("");
+                    if (next) {
+                      e.preventDefault();
+                      router.push(withNext("/login", next));
+                    }
+                  }}
+                  className="text-primary-600 hover:text-primary-700 font-semibold"
+                >
                   Log in
                 </Link>
               </p>

@@ -22,14 +22,28 @@ def _clean_project_url(v: str | None) -> str | None:
     return v
 
 
+def _clean_roles(v: list[str] | None) -> list[str] | None:
+    """Trim, drop blanks/duplicates (case-insensitive), cap at 6 roles of 40 chars."""
+    if v is None:
+        return None
+    out: list[str] = []
+    for role in v:
+        role = role.strip()[:40]
+        if role and role.lower() not in (r.lower() for r in out):
+            out.append(role)
+    return out[:6]
+
+
 class IdeaCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     body: str = Field(min_length=1)
     category: str = Field(default="General", max_length=80)
     visibility: str = Field(default="public", pattern="^(public|private)$")
     project_url: str | None = Field(default=None, max_length=500)
+    looking_for: list[str] | None = None
 
     _url = field_validator("project_url")(_clean_project_url)
+    _roles = field_validator("looking_for")(_clean_roles)
 
 
 class IdeaUpdate(BaseModel):
@@ -41,8 +55,10 @@ class IdeaUpdate(BaseModel):
     category: str | None = Field(default=None, max_length=80)
     visibility: str | None = Field(default=None, pattern="^(public|private)$")
     project_url: str | None = Field(default=None, max_length=500)
+    looking_for: list[str] | None = None
 
     _url = field_validator("project_url")(_clean_project_url)
+    _roles = field_validator("looking_for")(_clean_roles)
 
 
 class IdeaOut(BaseModel):
@@ -54,6 +70,7 @@ class IdeaOut(BaseModel):
     category: str
     visibility: str
     project_url: str | None = None
+    looking_for: list[str] = []
     created_at: datetime
     updated_at: datetime
     author: UserPublic
@@ -66,6 +83,11 @@ class IdeaOut(BaseModel):
     member_count: int = 0
     # none | pending | member | owner
     join_status: str = "none"
+
+    @field_validator("looking_for", mode="before")
+    @classmethod
+    def _roles_default(cls, v: list[str] | None) -> list[str]:
+        return v or []
 
 
 class IdeaListResponse(BaseModel):

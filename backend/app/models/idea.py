@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
-from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import JSON, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -22,6 +22,8 @@ class Idea(Base, TimestampMixin):
     visibility: Mapped[str] = mapped_column(String(20), default="public")
     # Optional link to the live project (site, app store page, demo...).
     project_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Roles the author wants to recruit, e.g. ["Developer", "Designer"].
+    looking_for: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     # Admin-moderation: hidden ideas are excluded from public feed & search.
     hidden: Mapped[bool] = mapped_column(default=False, server_default=sa.false())
 

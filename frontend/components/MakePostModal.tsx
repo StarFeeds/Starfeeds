@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api/client";
 import type { Idea } from "@/lib/api/types";
 import { DETAIL_FIELDS, EMPTY_DETAILS, composeBody, splitBody } from "@/lib/ideaBody";
+import { ROLES } from "@/lib/share";
+import { ShareOptions } from "@/components/ShareMenu";
 
 const CATEGORIES = [
   "Artificial Intelligence",
@@ -50,12 +52,19 @@ export function MakePostModal({ open, onClose, onCreated, idea, onSaved }: MakeP
   const [showDetails, setShowDetails] = useState(
     !!initial && Object.values(initial.details).some(Boolean),
   );
+  const [roles, setRoles] = useState<string[]>(idea?.looking_for ?? []);
+  // Set after a successful post: the modal switches to a "share it" step.
+  const [created, setCreated] = useState<Idea | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setCreated(null);
+      onClose();
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
@@ -63,6 +72,14 @@ export function MakePostModal({ open, onClose, onCreated, idea, onSaved }: MakeP
   if (!open) return null;
 
   const canPost = title.trim() !== "" && description.trim() !== "";
+
+  const close = () => {
+    setCreated(null);
+    onClose();
+  };
+
+  const toggleRole = (role: string) =>
+    setRoles((rs) => (rs.includes(role) ? rs.filter((r) => r !== role) : [...rs, role]));
 
   const reset = () => {
     setTitle("");
@@ -72,6 +89,7 @@ export function MakePostModal({ open, onClose, onCreated, idea, onSaved }: MakeP
     setVisibility("public");
     setShowDetails(false);
     setDetails(EMPTY_DETAILS);
+    setRoles([]);
     setError(null);
   };
 
@@ -88,6 +106,7 @@ export function MakePostModal({ open, onClose, onCreated, idea, onSaved }: MakeP
       category: category ?? (idea && !CATEGORIES.includes(idea.category) ? idea.category : "General"),
       visibility,
       project_url: projectUrl.trim(),
+      looking_for: roles,
     };
 
     setSubmitting(true);
@@ -95,12 +114,13 @@ export function MakePostModal({ open, onClose, onCreated, idea, onSaved }: MakeP
     try {
       if (idea) {
         onSaved?.(await api.ideas.update(idea.id, input));
+        onClose();
       } else {
-        await api.ideas.create({ ...input, project_url: input.project_url || null });
+        const newIdea = await api.ideas.create({ ...input, project_url: input.project_url || null });
         reset();
         onCreated?.();
+        setCreated(newIdea);
       }
-      onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : editing ? "Failed to save changes" : "Failed to post idea");
     } finally {
@@ -114,15 +134,15 @@ export function MakePostModal({ open, onClose, onCreated, idea, onSaved }: MakeP
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-neutral-900/40 p-4 py-10"
-      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+      onMouseDown={(e) => e.target === e.currentTarget && close()}
     >
       <div className="w-full max-w-xl bg-white rounded-2xl shadow-md">
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
           <h2 className="font-bold text-lg text-neutral-900">
-            {editing ? "Edit your idea" : <>Share what you&apos;re working on</>}
+            {created ? "Posted!" : editing ? "Edit your idea" : <>Share what you&apos;re working on</>}
           </h2>
           <button
-            onClick={onClose}
+            onClick={close}
             className="text-neutral-400 hover:text-neutral-700 transition"
             aria-label="Close"
           >
@@ -132,6 +152,25 @@ export function MakePostModal({ open, onClose, onCreated, idea, onSaved }: MakeP
           </button>
         </div>
 
+        {created ? (
+          <div className="p-6">
+            <p className="text-neutral-700">
+              <span className="font-semibold text-neutral-900">{created.title}</span> is live. Share it where your
+              people are. Ideas that get shared find collaborators much faster.
+            </p>
+            <div className="mt-4 rounded-xl border border-neutral-200 p-1.5">
+              <ShareOptions idea={created} />
+            </div>
+            <div className="mt-5 flex justify-end">
+              <button
+                onClick={close}
+                className="px-6 h-11 rounded-full bg-neutral-900 hover:bg-neutral-700 text-white text-sm font-semibold transition"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
             <div className="p-3 bg-destructive-500/10 border border-destructive-500/20 rounded-lg">
@@ -204,6 +243,31 @@ export function MakePostModal({ open, onClose, onCreated, idea, onSaved }: MakeP
           </div>
 
           <div>
+            <p className="text-xs font-semibold text-neutral-500 mb-2">Looking for (optional)</p>
+            <div className="flex flex-wrap gap-2">
+              {[...ROLES, ...roles.filter((r) => !ROLES.includes(r))].map((role) => {
+                const active = roles.includes(role);
+                return (
+                  <button
+                    key={role}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => toggleRole(role)}
+                    className={`px-3 h-8 rounded-full text-sm border transition ${
+                      active
+                        ? "bg-primary-700 border-primary-700 text-white"
+                        : "border-dashed border-neutral-300 text-neutral-700 hover:border-primary-500 hover:text-primary-700"
+                    }`}
+                  >
+                    {active ? "✓ " : "+ "}
+                    {role}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
             <button
               type="button"
               aria-expanded={showDetails}
@@ -261,6 +325,7 @@ export function MakePostModal({ open, onClose, onCreated, idea, onSaved }: MakeP
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

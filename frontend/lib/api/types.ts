@@ -101,6 +101,7 @@ export interface Idea {
   category: string;
   visibility: string;
   project_url: string | null;
+  looking_for: string[];
   created_at: string;
   updated_at: string;
   author: User;
@@ -119,6 +120,7 @@ export interface IdeaInput {
   category: string;
   visibility: "public" | "private";
   project_url?: string | null;
+  looking_for?: string[];
 }
 
 export type UnsubscribeScope = "activity" | "weekly" | "announcements";

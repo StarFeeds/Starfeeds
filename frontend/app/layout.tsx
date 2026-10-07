@@ -4,8 +4,11 @@ import { AuthProvider } from "@/lib/context/auth";
 import { RealtimeProvider } from "@/lib/context/realtime";
 
 export const metadata: Metadata = {
+  // Base for absolute URLs in link previews (og:image, og:url).
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://www.likeminds.live"),
   title: "LikeMinds",
-  description: "Idea bank and social platform",
+  description: "Share what you're building and find people to build it with.",
+  openGraph: { siteName: "LikeMinds", type: "website" },
 };
 
 export default function RootLayout({
