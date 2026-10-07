@@ -6,7 +6,7 @@ With CRON_SECRET unset these endpoints don't exist (404).
 
 import hmac
 
-from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Query, status
 
 from app.core.config import settings
 from app.digest import send_weekly_digest
@@ -23,9 +23,11 @@ def _check_secret(given: str | None) -> None:
 
 @router.post("/digest/weekly", status_code=status.HTTP_202_ACCEPTED)
 async def weekly_digest(
-    background_tasks: BackgroundTasks, x_cron_secret: str | None = Header(default=None)
+    background_tasks: BackgroundTasks,
+    x_cron_secret: str | None = Header(default=None),
+    to: str | None = Query(default=None, max_length=255, description="Send a test copy to this user only"),
 ) -> dict[str, str]:
     """Queue this week's digest. Safe to call more than once a week."""
     _check_secret(x_cron_secret)
-    background_tasks.add_task(send_weekly_digest)
-    return {"status": "queued"}
+    background_tasks.add_task(send_weekly_digest, to)
+    return {"status": "queued", "to": to or "everyone"}

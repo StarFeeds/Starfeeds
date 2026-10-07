@@ -127,7 +127,9 @@ def _subject(week: UserWeek) -> str:
         return "Your week on LikeMinds: " + ", ".join(parts)
     if week.unread_messages:
         return f"You have {_plural(week.unread_messages, 'unread message')} on LikeMinds"
-    return f"{_plural(len(week.top), 'new project')} worth a look on LikeMinds"
+    if week.top:
+        return f"{_plural(len(week.top), 'new project')} worth a look on LikeMinds"
+    return "Your week on LikeMinds"
 
 
 def render(first_name: str, week: UserWeek, base_url: str, unsub_url: str) -> tuple[str, str, str]:
@@ -175,13 +177,27 @@ def render(first_name: str, week: UserWeek, base_url: str, unsub_url: str) -> tu
             inner += f'<p style="margin:16px 0 0;">{button("Explore projects", base_url + "/home")}</p>\n'
         text += "\n"
 
+    if not stats and not week.top:
+        # Only reachable for test sends; real runs skip empty weeks.
+        text += "It was a quiet week. Share what you're working on to get things moving.\n\n"
+        inner += (
+            '<p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#3f3f46;">It was a quiet week. '
+            "Share what you're working on to get things moving.</p>\n"
+            f'<p style="margin:0;">{button("Share a project", base_url + "/home")}</p>\n'
+        )
+
     text += f"Open LikeMinds: {base_url}/home\n\n— LikeMinds\n\nStop weekly digests: {unsub_url}"
     body = wrap(inner, reason="You're getting the LikeMinds weekly digest.", unsub_url=unsub_url)
     return _subject(week), body, text
 
 
-async def send_weekly_digest() -> dict[str, int]:
-    """Send this week's digest to everyone opted in. Never raises."""
+async def send_weekly_digest(only_email: str | None = None) -> dict[str, int]:
+    """Send this week's digest to everyone opted in. Never raises.
+
+    `only_email` sends a test copy to that one user instead: it ignores the
+    weekly pref and the 6-day guard, sends even on a quiet week, and doesn't
+    count as their weekly send.
+    """
     counts = {"sent": 0, "skipped_empty": 0, "failed": 0}
     if not settings.email_enabled:
         logger.info("Weekly digest skipped: email disabled")
@@ -192,25 +208,30 @@ async def send_weekly_digest() -> dict[str, int]:
     try:
         async with AsyncSessionLocal() as db:
             top = await _top_new_ideas(db, since)
-            users = (
-                await db.execute(
-                    select(User.id, User.email, User.full_name, User.notification_prefs).where(
-                        User.is_active.is_(True),
-                        or_(User.last_digest_at.is_(None), User.last_digest_at < now - RESEND_GAP),
-                    )
+            query = select(User.id, User.email, User.full_name, User.notification_prefs)
+            if only_email:
+                query = query.where(func.lower(User.email) == only_email.strip().lower())
+            else:
+                query = query.where(
+                    User.is_active.is_(True),
+                    or_(User.last_digest_at.is_(None), User.last_digest_at < now - RESEND_GAP),
                 )
-            ).all()
+            users = (await db.execute(query)).all()
+            if only_email and not users:
+                logger.warning("Test digest: no user with email %s", only_email)
 
             for user_id, email, full_name, prefs in users:
-                if not (prefs or {}).get("weekly", True):
+                if not only_email and not (prefs or {}).get("weekly", True):
                     continue
                 week = await _user_week(db, user_id, since, top)
-                if not week.has_own_activity and not week.top:
+                if not only_email and not week.has_own_activity and not week.top:
                     counts["skipped_empty"] += 1
                     continue
                 unsub = f"{base}/unsubscribe?token={create_unsubscribe_token(user_id, scope='weekly')}"
                 subject, body, text = render((full_name or "there").split(" ")[0], week, base, unsub)
-                if await send_email(email, subject, body, text):
+                if only_email:
+                    counts["sent" if await send_email(email, subject, body, text) else "failed"] += 1
+                elif await send_email(email, subject, body, text):
                     counts["sent"] += 1
                     await db.execute(
                         update(User)
