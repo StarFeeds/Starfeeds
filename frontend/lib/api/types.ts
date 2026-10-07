@@ -121,6 +121,8 @@ export interface IdeaInput {
   project_url?: string | null;
 }
 
+export type UnsubscribeScope = "activity" | "weekly" | "announcements";
+
 export interface LinkCheck {
   url: string;
   embeddable: boolean;

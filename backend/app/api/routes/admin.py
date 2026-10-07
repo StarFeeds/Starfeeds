@@ -1,10 +1,13 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status
 from sqlalchemy import desc, func, or_, select
 from sqlalchemy.orm import selectinload
 
+from app.announcement_email import send_announcement_emails
 from app.api.deps import AdminUser, DbSession
+from app.core.config import settings
+from app.realtime import manager, push_notification
 from app.models import (
     CollaborationRequest,
     Comment,
@@ -224,16 +227,41 @@ async def delete_idea(idea_id: int, db: DbSession, admin: AdminUser) -> None:
 # --------------------------------------------------------------------------- #
 # Announcements — broadcast a system notification to every user
 # --------------------------------------------------------------------------- #
+async def _announcement_recipients(db: DbSession) -> list[int]:
+    """Active users with "General Announcements" on (the default)."""
+    rows = (
+        await db.execute(select(User.id, User.notification_prefs).where(User.is_active.is_(True)))
+    ).all()
+    return [uid for uid, prefs in rows if (prefs or {}).get("announcements", True)]
+
+
+@router.get("/announcements/audience")
+async def announcement_audience(db: DbSession, admin: AdminUser) -> dict:
+    """How many people a broadcast would reach, shown before sending."""
+    n = len(await _announcement_recipients(db))
+    return {"in_app": n, "email": n if settings.email_enabled else 0}
+
+
 @router.post("/announcements", status_code=status.HTTP_201_CREATED)
-async def broadcast(payload: AnnouncementCreate, db: DbSession, admin: AdminUser) -> dict:
-    rows = (await db.execute(select(User.id, User.notification_prefs))).all()
-    # Respect each user's "General Announcements" preference.
-    recipient_ids = [uid for uid, prefs in rows if (prefs or {}).get("announcements", True)]
-    db.add_all(
-        [
-            Notification(user_id=uid, actor_id=None, type="system", text=payload.text)
-            for uid in recipient_ids
-        ]
-    )
+async def broadcast(
+    payload: AnnouncementCreate, db: DbSession, admin: AdminUser, background_tasks: BackgroundTasks
+) -> dict:
+    recipient_ids = await _announcement_recipients(db)
+    notifs = [
+        Notification(user_id=uid, actor_id=None, type="system", text=payload.text)
+        for uid in recipient_ids
+    ]
+    db.add_all(notifs)
     await db.commit()
-    return {"delivered": len(recipient_ids)}
+
+    # Live delivery to everyone who has LikeMinds open right now.
+    for n in notifs:
+        if manager.is_connected(n.user_id):
+            await db.refresh(n)
+            await push_notification(n.user_id, n, None)
+
+    emailing = 0
+    if payload.email and settings.email_enabled and recipient_ids:
+        background_tasks.add_task(send_announcement_emails, recipient_ids, payload.text)
+        emailing = len(recipient_ids)
+    return {"delivered": len(recipient_ids), "emailing": emailing}

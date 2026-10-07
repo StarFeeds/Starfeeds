@@ -4,11 +4,12 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api/client";
+import type { UnsubscribeScope } from "@/lib/api/types";
 import { Logo } from "@/components/Logo";
 
 type State =
   | { status: "working" }
-  | { status: "done"; email: string; scope: "activity" | "weekly" }
+  | { status: "done"; email: string; scope: UnsubscribeScope }
   | { status: "error"; message: string };
 
 /** Landing page for the "Stop these emails" link in activity emails. */
@@ -41,9 +42,13 @@ function Unsubscribe() {
           <h1 className="text-xl font-bold text-neutral-900">You&apos;re unsubscribed</h1>
           <p className="mt-2 text-sm text-neutral-600">
             We won&apos;t send <span className="font-semibold text-neutral-800">{state.email}</span>{" "}
-            {state.scope === "weekly"
-              ? "the weekly digest anymore."
-              : "emails about comments, join requests or messages anymore. You'll still see them in the app."}
+            {
+              {
+                weekly: "the weekly digest anymore.",
+                announcements: "LikeMinds announcements anymore.",
+                activity: "emails about comments, join requests or messages anymore. You'll still see them in the app.",
+              }[state.scope]
+            }
           </p>
           <p className="mt-2 text-sm text-neutral-600">Changed your mind? Turn them back on in Settings.</p>
         </>

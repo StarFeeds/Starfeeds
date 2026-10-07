@@ -90,3 +90,5 @@ class AdminIdeaUpdate(BaseModel):
 
 class AnnouncementCreate(BaseModel):
     text: str = Field(min_length=1, max_length=500)
+    # Also email it (to users with announcements on). On by default.
+    email: bool = True

@@ -5,6 +5,7 @@ import {
   IdeaInput,
   IdeaListResponse,
   LinkCheck,
+  UnsubscribeScope,
   Comment,
   Notification,
   CollaborationRequest,
@@ -296,8 +297,8 @@ export const api = {
 
   email: {
     /** One-click unsubscribe from activity emails (token from the email link; no login). */
-    unsubscribe: async (token: string): Promise<{ email: string; scope: "activity" | "weekly" }> => {
-      return apiCall<{ email: string; scope: "activity" | "weekly" }>("/email/unsubscribe", {
+    unsubscribe: async (token: string): Promise<{ email: string; scope: UnsubscribeScope }> => {
+      return apiCall<{ email: string; scope: UnsubscribeScope }>("/email/unsubscribe", {
         method: "POST",
         body: JSON.stringify({ token }),
       });
@@ -459,11 +460,14 @@ export const api = {
       await apiCall<void>(`/admin/ideas/${id}`, { method: "DELETE", requiresAuth: true });
     },
 
-    announce: async (text: string): Promise<{ delivered: number }> =>
-      apiCall<{ delivered: number }>("/admin/announcements", {
+    announce: async (text: string, email: boolean): Promise<{ delivered: number; emailing: number }> =>
+      apiCall<{ delivered: number; emailing: number }>("/admin/announcements", {
         method: "POST",
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, email }),
         requiresAuth: true,
       }),
+    /** How many people a broadcast would reach (in-app / by email). */
+    announcementAudience: async (): Promise<{ in_app: number; email: number }> =>
+      apiCall<{ in_app: number; email: number }>("/admin/announcements/audience", { requiresAuth: true }),
   },
 };
