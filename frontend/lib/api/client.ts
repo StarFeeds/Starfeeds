@@ -179,6 +179,16 @@ export const api = {
       return tokens;
     },
 
+    /** Sign in / sign up with a Google Identity Services credential. */
+    google: async (credential: string): Promise<TokenPair & { is_new: boolean }> => {
+      const tokens = await apiCall<TokenPair & { is_new: boolean }>("/auth/google", {
+        method: "POST",
+        body: JSON.stringify({ credential }),
+      });
+      setStoredTokens({ access: tokens.access_token, refresh: tokens.refresh_token });
+      return tokens;
+    },
+
     refresh: async (refreshToken: string): Promise<TokenPair> => {
       const tokens = await apiCall<TokenPair>("/auth/refresh", {
         method: "POST",

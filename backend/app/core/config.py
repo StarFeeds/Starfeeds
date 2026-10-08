@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     # Comma-separated emails auto-granted admin on login/signup.
     ADMIN_EMAILS: str = ""
 
+    # Google Sign-In: the OAuth Web client ID (public, ends in
+    # .apps.googleusercontent.com). Unset = /auth/google is disabled.
+    GOOGLE_CLIENT_ID: str | None = None
+
     # Shared secret for scheduled jobs (e.g. the weekly digest, triggered by a
     # GitHub Actions cron). Unset = those endpoints are disabled.
     CRON_SECRET: str | None = None

@@ -140,6 +140,18 @@ export default function HomePage() {
           actionLabel: "Add photo",
           href: "/profile/edit",
         },
+        // Google sign-ups arrive without a number; collaborators coordinate on WhatsApp.
+        ...(user.phone
+          ? []
+          : [
+              {
+                key: "phone",
+                label: "Add your WhatsApp number",
+                done: false,
+                actionLabel: "Add",
+                href: "/settings",
+              },
+            ]),
       ]
     : [];
   // Card stays until the two required steps (post + explore) are done. Photo is

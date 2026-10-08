@@ -213,7 +213,9 @@ export default function ForgotPasswordPage() {
           </div>
         </div>
         <footer className="py-6 text-center text-xs text-neutral-500">
-          © LikeMinds 2026
+          © LikeMinds 2026 ·{" "}
+          <Link href="/privacy" className="hover:text-neutral-700">Privacy</Link> ·{" "}
+          <Link href="/terms" className="hover:text-neutral-700">Terms</Link>
         </footer>
       </div>
     </div>

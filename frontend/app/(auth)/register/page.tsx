@@ -6,7 +6,7 @@ import Link from "next/link";
 import { nextPath, withNext } from "@/lib/share";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/context/auth";
-import { AuthHero, SocialButtons, OrDivider } from "@/components/auth-ui";
+import { AuthHero, SocialSignIn } from "@/components/auth-ui";
 import { Logo } from "@/components/Logo";
 
 const ACCOUNT_TYPES = ["Investor", "Mentor", "Innovator"] as const;
@@ -88,8 +88,7 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-4">
-              <SocialButtons />
-              <OrDivider />
+              <SocialSignIn text="signup_with" />
 
               {error && (
                 <div className="p-3 bg-destructive-500/10 border border-destructive-500/20 rounded-lg">
@@ -240,7 +239,9 @@ export default function RegisterPage() {
           </div>
         </div>
         <footer className="py-6 text-center text-xs text-neutral-500">
-          © LikeMinds 2026
+          © LikeMinds 2026 ·{" "}
+          <Link href="/privacy" className="hover:text-neutral-700">Privacy</Link> ·{" "}
+          <Link href="/terms" className="hover:text-neutral-700">Terms</Link>
         </footer>
       </div>
 

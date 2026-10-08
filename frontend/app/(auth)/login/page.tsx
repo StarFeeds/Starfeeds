@@ -6,7 +6,7 @@ import Link from "next/link";
 import { nextPath, withNext } from "@/lib/share";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/context/auth";
-import { AuthHero, SocialButtons, OrDivider } from "@/components/auth-ui";
+import { AuthHero, SocialSignIn } from "@/components/auth-ui";
 import { Logo } from "@/components/Logo";
 
 export default function LoginPage() {
@@ -52,13 +52,12 @@ export default function LoginPage() {
             <div className="text-center mb-8">
               <h1 className="text-2xl font-bold text-neutral-900 mb-1">Log in</h1>
               <p className="text-sm text-neutral-600">
-                Welcome back, please use the social to log in
+                Welcome back. Log in to see what your people are building.
               </p>
             </div>
 
             <div className="space-y-5">
-              <SocialButtons />
-              <OrDivider />
+              <SocialSignIn text="continue_with" />
 
               {error && (
                 <div className="p-3 bg-destructive-500/10 border border-destructive-500/20 rounded-lg">
@@ -174,7 +173,9 @@ export default function LoginPage() {
           </div>
         </div>
         <footer className="py-6 text-center text-xs text-neutral-500">
-          © LikeMinds 2026
+          © LikeMinds 2026 ·{" "}
+          <Link href="/privacy" className="hover:text-neutral-700">Privacy</Link> ·{" "}
+          <Link href="/terms" className="hover:text-neutral-700">Terms</Link>
         </footer>
       </div>
     </div>
