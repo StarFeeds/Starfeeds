@@ -80,6 +80,7 @@ export default function SettingsPage() {
     weekly: np.weekly ?? true,
     important: np.important ?? true,
     email_activity: np.email_activity ?? true,
+    tips: np.tips ?? true,
   });
   const [visibility, setVisibility] = useState({
     publicProfile: np.public_profile ?? true,
@@ -212,6 +213,7 @@ export default function SettingsPage() {
             onChange={() => toggle("email_activity")}
           />
           <ToggleRow label="Weekly digest" value={prefs.weekly} onChange={() => toggle("weekly")} />
+          <ToggleRow label="Tips to get started" value={prefs.tips} onChange={() => toggle("tips")} />
           <ToggleRow label="Important Updates" value={prefs.important} onChange={() => toggle("important")} comingSoon />
         </div>
       </section>

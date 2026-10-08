@@ -5,6 +5,7 @@ from sqlalchemy import desc, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app.announcement_email import send_announcement_emails
+from app.nudges import catch_up_audience, inactive_condition, send_catch_up
 from app.api.deps import AdminUser, DbSession
 from app.core.config import settings
 from app.realtime import manager, push_notification
@@ -326,8 +327,28 @@ async def funnel(db: DbSession, admin: AdminUser, days: int = Query(30, ge=7, le
         pending_over_48h=sum(r.status == "pending" and _utc(r.created_at) < now - timedelta(hours=48) for r in reqs),
         median_response_hours=median,
         teams_active=teams_active,
+        nudged=await _count(db, User, User.last_nudge_at >= start),
+        nudged_came_back=await _count(db, User, User.last_nudge_at >= start, User.last_seen_at > User.last_nudge_at),
+        nudged_acted=await _count(db, User, User.last_nudge_at >= start, ~inactive_condition()),
         teams_by_week=[DailyCount(date=k, count=v) for k, v in weekly.items()],
     )
+
+
+@router.get("/nudges/catch-up")
+async def catch_up_preview(db: DbSession, admin: AdminUser) -> dict:
+    """How many inactive members the one-off catch-up email would reach."""
+    return {"eligible": len(await catch_up_audience(db)), "email_enabled": settings.email_enabled}
+
+
+@router.post("/nudges/catch-up", status_code=status.HTTP_202_ACCEPTED)
+async def catch_up_send(db: DbSession, admin: AdminUser, background_tasks: BackgroundTasks) -> dict:
+    """Email every inactive member who hasn't been nudged yet (once each)."""
+    if not settings.email_enabled:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Email isn't configured")
+    n = len(await catch_up_audience(db))
+    if n:
+        background_tasks.add_task(send_catch_up)
+    return {"queued": n}
 
 
 # --------------------------------------------------------------------------- #

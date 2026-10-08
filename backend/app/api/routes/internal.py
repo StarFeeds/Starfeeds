@@ -10,6 +10,7 @@ from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Query, st
 
 from app.core.config import settings
 from app.digest import send_weekly_digest
+from app.nudges import send_due_nudges
 from app.reminders import send_pending_request_reminders
 
 router = APIRouter(prefix="/internal", tags=["internal"], include_in_schema=False)
@@ -38,7 +39,9 @@ async def weekly_digest(
 async def daily_reminders(
     background_tasks: BackgroundTasks, x_cron_secret: str | None = Header(default=None)
 ) -> dict[str, str]:
-    """Queue today's reminders (join requests waiting > 48h). Safe to re-run."""
+    """Queue today's reminders (join requests waiting > 48h) and nudges for
+    inactive members. Both record what they sent, so re-running is safe."""
     _check_secret(x_cron_secret)
     background_tasks.add_task(send_pending_request_reminders)
+    background_tasks.add_task(send_due_nudges)
     return {"status": "queued"}

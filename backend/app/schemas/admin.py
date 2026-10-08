@@ -124,5 +124,9 @@ class TeamFunnel(BaseModel):
     median_response_hours: float | None
     # Accepted requests where both people then posted in the project group.
     teams_active: int
+    # "Come back" emails to inactive members in the window, and what happened.
+    nudged: int = 0
+    nudged_came_back: int = 0
+    nudged_acted: int = 0
     # Accepted requests per week (oldest first), the north-star trend.
     teams_by_week: list[DailyCount]

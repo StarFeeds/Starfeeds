@@ -8,6 +8,7 @@ export interface NotificationPrefs {
   public_profile: boolean;
   show_online: boolean;
   email_activity?: boolean;
+  tips?: boolean;
 }
 
 export interface User {
@@ -140,10 +141,13 @@ export interface TeamFunnel {
   pending_over_48h: number;
   median_response_hours: number | null;
   teams_active: number;
+  nudged: number;
+  nudged_came_back: number;
+  nudged_acted: number;
   teams_by_week: { date: string; count: number }[];
 }
 
-export type UnsubscribeScope = "activity" | "weekly" | "announcements";
+export type UnsubscribeScope = "activity" | "weekly" | "announcements" | "tips";
 
 export interface LinkCheck {
   url: string;

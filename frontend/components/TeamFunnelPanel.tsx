@@ -80,6 +80,11 @@ export function TeamFunnelPanel() {
               of={data.signups}
               hint={`${data.posted} posted · ${data.requested} asked to join`}
             />
+            <Step
+              label="Nudged to come back"
+              value={data.nudged}
+              hint={`${data.nudged_came_back} came back · ${data.nudged_acted} posted or joined`}
+            />
           </div>
 
           <div className="space-y-3">

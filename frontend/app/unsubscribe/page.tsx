@@ -46,6 +46,7 @@ function Unsubscribe() {
               {
                 weekly: "the weekly digest anymore.",
                 announcements: "LikeMinds announcements anymore.",
+                tips: "tips for getting started anymore.",
                 activity: "emails about comments, join requests or messages anymore. You'll still see them in the app.",
               }[state.scope]
             }

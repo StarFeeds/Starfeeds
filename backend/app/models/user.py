@@ -19,6 +19,8 @@ DEFAULT_NOTIFICATION_PREFS: dict[str, bool] = {
     "show_online": True,
     # Email me when someone comments, asks to join, accepts, or messages me.
     "email_activity": True,
+    # "Getting started" nudges for members who haven't posted or joined yet.
+    "tips": True,
 }
 
 
@@ -52,6 +54,9 @@ class User(Base, TimestampMixin):
     )
     # Last time a live session connected or disconnected (see app/presence.py).
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # "Come back" emails sent to an inactive member, and when (app/nudges.py).
+    nudge_count: Mapped[int] = mapped_column(default=0, server_default="0")
+    last_nudge_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # When we last sent the weekly digest (see app/digest.py).
     last_digest_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

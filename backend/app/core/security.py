@@ -46,7 +46,12 @@ def create_refresh_token(subject: str | int) -> str:
 
 
 # Email kinds a one-click unsubscribe link can turn off -> notification_prefs key.
-UNSUBSCRIBE_SCOPES = {"activity": "email_activity", "weekly": "weekly", "announcements": "announcements"}
+UNSUBSCRIBE_SCOPES = {
+    "activity": "email_activity",
+    "weekly": "weekly",
+    "announcements": "announcements",
+    "tips": "tips",
+}
 
 
 def create_unsubscribe_token(subject: str | int, scope: str = "activity") -> str:

@@ -61,3 +61,4 @@ class NotificationPrefsUpdate(BaseModel):
     public_profile: bool | None = None
     show_online: bool | None = None
     email_activity: bool | None = None
+    tips: bool | None = None

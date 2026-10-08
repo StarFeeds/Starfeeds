@@ -484,6 +484,11 @@ export const api = {
         body: JSON.stringify({ text, email }),
         requiresAuth: true,
       }),
+    /** Inactive members (joined 30+ days ago) the catch-up email would reach. */
+    catchUpPreview: async (): Promise<{ eligible: number; email_enabled: boolean }> =>
+      apiCall<{ eligible: number; email_enabled: boolean }>("/admin/nudges/catch-up", { requiresAuth: true }),
+    catchUpSend: async (): Promise<{ queued: number }> =>
+      apiCall<{ queued: number }>("/admin/nudges/catch-up", { method: "POST", requiresAuth: true }),
     /** Sign-up -> activation -> join request -> accepted -> active team. */
     funnel: async (days = 30): Promise<TeamFunnel> =>
       apiCall<TeamFunnel>(`/admin/funnel?days=${days}`, { requiresAuth: true }),

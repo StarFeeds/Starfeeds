@@ -215,6 +215,8 @@ async def send_weekly_digest(only_email: str | None = None) -> dict[str, int]:
                 query = query.where(
                     User.is_active.is_(True),
                     or_(User.last_digest_at.is_(None), User.last_digest_at < now - RESEND_GAP),
+                    # Don't stack the digest on top of a recent "come back" nudge.
+                    or_(User.last_nudge_at.is_(None), User.last_nudge_at < now - timedelta(days=3)),
                 )
             users = (await db.execute(query)).all()
             if only_email and not users:

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api/client";
+import { CatchUpCard } from "@/components/CatchUpCard";
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
@@ -43,6 +44,7 @@ export default function AdminAnnouncementsPage() {
   };
 
   return (
+    <div className="space-y-4">
     <div className="bg-white rounded-2xl border border-neutral-200 shadow-xs p-5 space-y-3">
       <div>
         <h3 className="font-bold text-neutral-900">Broadcast announcement</h3>
@@ -91,6 +93,8 @@ export default function AdminAnnouncementsPage() {
           {sending ? "Sending…" : "Send to all users"}
         </button>
       </div>
+    </div>
+    <CatchUpCard />
     </div>
   );
 }
