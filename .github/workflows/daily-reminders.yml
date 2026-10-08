@@ -1,0 +1,26 @@
+name: Daily reminders
+
+# Every day 08:00 UTC (09:00 in Lagos): remind project owners about join
+# requests waiting more than 48h. Each request is reminded about once, so
+# re-running is safe. Uses the same CRON_SECRET as the weekly digest.
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger daily reminders
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          API_URL: ${{ vars.API_URL || 'https://starfeeds.onrender.com' }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::Add a CRON_SECRET repository secret (same value as on Render)."
+            exit 1
+          fi
+          curl --fail-with-body --retry 3 --retry-delay 20 --retry-all-errors -sS \
+            -X POST -H "X-Cron-Secret: $CRON_SECRET" \
+            "$API_URL/api/v1/internal/reminders/daily"

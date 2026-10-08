@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, ForeignKey, String, Text, UniqueConstraint
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -49,6 +51,10 @@ class CollaborationRequest(Base, TimestampMixin):
     )
     # pending | accepted | declined
     status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
+    # Requester's note: what they'd bring / why they want to join.
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # When the owner was reminded about this still-pending request.
+    reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     from_user: Mapped["User"] = relationship(foreign_keys=[from_user_id])
     to_user: Mapped["User"] = relationship(foreign_keys=[to_user_id])

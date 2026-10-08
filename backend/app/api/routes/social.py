@@ -132,7 +132,7 @@ async def list_collab_requests(
     db: DbSession,
     current_user: CurrentUser,
     box: str = Query("incoming", pattern="^(incoming|outgoing)$"),
-) -> list[CollaborationRequest]:
+) -> list[CollaborationRequestOut]:
     field = (
         CollaborationRequest.to_user_id
         if box == "incoming"
@@ -149,7 +149,16 @@ async def list_collab_requests(
             .order_by(CollaborationRequest.created_at.desc())
         )
     ).all()
-    return list(rows)
+    idea_ids = {r.idea_id for r in rows if r.idea_id is not None}
+    titles = (
+        dict((await db.execute(select(Idea.id, Idea.title).where(Idea.id.in_(idea_ids)))).all())
+        if idea_ids
+        else {}
+    )
+    return [
+        CollaborationRequestOut.model_validate(r).model_copy(update={"idea_title": titles.get(r.idea_id)})
+        for r in rows
+    ]
 
 
 async def _resolve_collab(
@@ -193,12 +202,24 @@ async def _resolve_collab(
             )
             db.add(notif)
 
+    if new_status == "declined" and req.idea_id is not None and req.from_user.wants_notification("collab"):
+        # Close the loop so requesters aren't left waiting (in-app only, gently worded).
+        idea = await db.get(Idea, req.idea_id)
+        notif = Notification(
+            user_id=req.from_user_id,
+            actor_id=current_user.id,
+            type="collab",
+            text=f"isn't adding new members to \"{idea.title if idea else 'their project'}\" right now",
+            idea_id=req.idea_id,
+        )
+        db.add(notif)
+
     await db.commit()
     await db.refresh(req, attribute_names=["from_user", "to_user"])
     if notif is not None:
         await db.refresh(notif)
         await push_notification(req.from_user_id, notif, current_user)
-        if background_tasks is not None:
+        if background_tasks is not None and new_status == "accepted":
             idea = await db.get(Idea, req.idea_id)
             title = idea.title if idea else "the project"
             background_tasks.add_task(

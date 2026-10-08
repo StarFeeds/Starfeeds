@@ -59,6 +59,8 @@ export interface CollaborationRequest {
   status: "pending" | "accepted" | "declined";
   created_at: string;
   idea_id: number | null;
+  idea_title?: string | null;
+  message?: string | null;
   from_user: PublicUser;
   to_user: PublicUser;
   conversation_id?: number | null;
@@ -121,6 +123,22 @@ export interface IdeaInput {
   visibility: "public" | "private";
   project_url?: string | null;
   looking_for?: string[];
+}
+
+export interface TeamFunnel {
+  days: number;
+  signups: number;
+  posted: number;
+  requested: number;
+  activated: number;
+  requests: number;
+  accepted: number;
+  declined: number;
+  pending: number;
+  pending_over_48h: number;
+  median_response_hours: number | null;
+  teams_active: number;
+  teams_by_week: { date: string; count: number }[];
 }
 
 export type UnsubscribeScope = "activity" | "weekly" | "announcements";

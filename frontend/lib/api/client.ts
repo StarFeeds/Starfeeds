@@ -5,6 +5,7 @@ import {
   IdeaInput,
   IdeaListResponse,
   LinkCheck,
+  TeamFunnel,
   UnsubscribeScope,
   Comment,
   Notification,
@@ -257,9 +258,10 @@ export const api = {
       });
     },
 
-    expressInterest: async (ideaId: number): Promise<CollaborationRequest> => {
+    expressInterest: async (ideaId: number, message?: string): Promise<CollaborationRequest> => {
       return apiCall<CollaborationRequest>(`/ideas/${ideaId}/interest`, {
         method: "POST",
+        body: JSON.stringify({ message: message?.trim() || null }),
         requiresAuth: true,
       });
     },
@@ -471,6 +473,9 @@ export const api = {
         body: JSON.stringify({ text, email }),
         requiresAuth: true,
       }),
+    /** Sign-up -> activation -> join request -> accepted -> active team. */
+    funnel: async (days = 30): Promise<TeamFunnel> =>
+      apiCall<TeamFunnel>(`/admin/funnel?days=${days}`, { requiresAuth: true }),
     /** How many people a broadcast would reach (in-app / by email). */
     announcementAudience: async (): Promise<{ in_app: number; email: number }> =>
       apiCall<{ in_app: number; email: number }>("/admin/announcements/audience", { requiresAuth: true }),

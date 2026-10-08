@@ -10,6 +10,7 @@ import { Avatar } from "@/components/Avatar";
 import { LinkViewer } from "@/components/LinkViewer";
 import { MakePostModal } from "@/components/MakePostModal";
 import { ShareButton } from "@/components/ShareMenu";
+import { JoinRequestModal } from "@/components/JoinRequestModal";
 import { ideaPath } from "@/lib/share";
 import { hostOf, parseSections, splitLinks } from "@/lib/ideaBody";
 
@@ -101,6 +102,7 @@ export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete, onGuestAc
   // Join a project's group
   const [joinStatus, setJoinStatus] = useState(idea.join_status);
   const [joining, setJoining] = useState(false);
+  const [joinOpen, setJoinOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const run = (fn: () => Promise<void>) => async () => {
@@ -160,14 +162,15 @@ export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete, onGuestAc
     }
   };
 
-  const requestJoin = async () => {
+  const requestJoin = () => setJoinOpen(true);
+
+  /** Called by the join dialog; errors are shown there. */
+  const sendJoinRequest = async (message: string) => {
     setJoining(true);
     setActionError(null);
     try {
-      await api.ideas.expressInterest(idea.id);
+      await api.ideas.expressInterest(idea.id, message);
       setJoinStatus("pending");
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to request to join");
     } finally {
       setJoining(false);
     }
@@ -499,6 +502,7 @@ export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete, onGuestAc
         />
       )}
       {viewingUrl && <LinkViewer url={viewingUrl} onClose={() => setViewingUrl(null)} />}
+      {joinOpen && <JoinRequestModal idea={idea} onClose={() => setJoinOpen(false)} onSubmit={sendJoinRequest} />}
     </div>
   );
 }

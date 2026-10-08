@@ -84,7 +84,7 @@ function ActivityView() {
     setRequests((prev) => prev.filter((r) => r.id !== id)); // optimistic
     setNotice(
       accept
-        ? "Request accepted — a conversation was started. Open Messages to chat."
+        ? "Request accepted. They've been added to your project group; say hello in Your Groups."
         : "Request declined."
     );
     try {
@@ -149,11 +149,17 @@ function ActivityView() {
                 <Avatar name={r.from_user.full_name} />
                 <div className="min-w-0">
                   <p className="text-sm text-neutral-900">
-                    <span className="font-semibold group-hover:text-primary-700 transition">{r.from_user.full_name}</span> wants to join your project
+                    <span className="font-semibold group-hover:text-primary-700 transition">{r.from_user.full_name}</span> wants to join{" "}
+                    {r.idea_title ? <span className="font-semibold">{r.idea_title}</span> : "your project"}
                   </p>
                   <p className="text-xs text-neutral-500">
                     {r.from_user.headline} · {timeAgo(r.created_at)}
                   </p>
+                  {r.message && (
+                    <p className="mt-1.5 text-sm text-neutral-700 bg-neutral-50 border-l-2 border-primary-300 rounded px-3 py-1.5 whitespace-pre-line">
+                      {r.message}
+                    </p>
+                  )}
                 </div>
               </Link>
               <div className="flex gap-2 flex-shrink-0">

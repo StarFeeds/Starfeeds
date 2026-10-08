@@ -92,3 +92,25 @@ class AnnouncementCreate(BaseModel):
     text: str = Field(min_length=1, max_length=500)
     # Also email it (to users with announcements on). On by default.
     email: bool = True
+
+
+class TeamFunnel(BaseModel):
+    """Is LikeMinds turning sign-ups into teams? (see GET /admin/funnel)"""
+
+    days: int
+    signups: int
+    # Of those sign-ups: posted an idea / asked to join one / did either.
+    posted: int
+    requested: int
+    activated: int
+    # Join requests sent in the window, and what happened to them.
+    requests: int
+    accepted: int
+    declined: int
+    pending: int
+    pending_over_48h: int
+    median_response_hours: float | None
+    # Accepted requests where both people then posted in the project group.
+    teams_active: int
+    # Accepted requests per week (oldest first), the north-star trend.
+    teams_by_week: list[DailyCount]

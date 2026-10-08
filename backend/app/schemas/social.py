@@ -24,10 +24,19 @@ class CollaborationRequestOut(BaseModel):
     status: str
     created_at: datetime
     idea_id: int | None = None
+    # Filled in by the list endpoint so the inbox can say which project.
+    idea_title: str | None = None
+    message: str | None = None
     from_user: UserPublic
     to_user: UserPublic
     # Set when a request is accepted — the conversation the two can chat in.
     conversation_id: int | None = None
+
+
+class JoinRequestIn(BaseModel):
+    """Optional note sent with a request to join a project."""
+
+    message: str | None = Field(default=None, max_length=500)
 
 
 class InterestCreate(BaseModel):

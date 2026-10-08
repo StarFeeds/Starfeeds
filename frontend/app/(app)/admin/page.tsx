@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api/client";
 import { AdminStats } from "@/lib/api/types";
+import { TeamFunnelPanel } from "@/components/TeamFunnelPanel";
 
 function Tile({ label, value, hint }: { label: string; value: number | string; hint?: string }) {
   return (
@@ -44,6 +45,8 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-4">
+      <TeamFunnelPanel />
+
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         <Tile label="Users" value={stats.users_total} hint={`${stats.users_active} active · ${stats.users_admin} admin`} />
         <Tile label="Ideas" value={stats.ideas_total} hint={`${stats.ideas_hidden} hidden`} />
@@ -61,12 +64,15 @@ export default function AdminDashboard() {
           <h3 className="font-bold text-sm text-neutral-900 mb-3">Signups — last 7 days</h3>
           <div className="flex items-end justify-between gap-2 h-32">
             {stats.signups_by_day.map((d) => (
-              <div key={d.date} className="flex-1 flex flex-col items-center gap-1 min-w-0">
+              <div key={d.date} className="flex-1 h-full flex flex-col items-center gap-1 min-w-0">
                 <span className="text-xs font-semibold text-neutral-700">{d.count}</span>
-                <div
-                  className="w-full bg-primary-500 rounded-t-md min-h-[2px]"
-                  style={{ height: `${(d.count / maxDay) * 100}%` }}
-                />
+                {/* The track fills the column so the bar's % height has something to scale against. */}
+                <div className="flex-1 w-full flex items-end">
+                  <div
+                    className="w-full bg-primary-500 rounded-t-md min-h-[2px]"
+                    style={{ height: `${(d.count / maxDay) * 100}%` }}
+                  />
+                </div>
                 <span className="text-[10px] text-neutral-400">{d.date.slice(5)}</span>
               </div>
             ))}

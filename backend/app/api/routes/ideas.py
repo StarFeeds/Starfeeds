@@ -23,7 +23,7 @@ from app.schemas.idea import (
     IdeaUpdate,
 )
 from app.realtime import push_notification
-from app.schemas.social import CollaborationRequestOut
+from app.schemas.social import CollaborationRequestOut, JoinRequestIn
 
 router = APIRouter(prefix="/ideas", tags=["ideas"])
 
@@ -357,7 +357,11 @@ async def create_comment(
     status_code=status.HTTP_201_CREATED,
 )
 async def express_interest(
-    idea_id: int, db: DbSession, current_user: CurrentUser, background_tasks: BackgroundTasks
+    idea_id: int,
+    db: DbSession,
+    current_user: CurrentUser,
+    background_tasks: BackgroundTasks,
+    payload: JoinRequestIn | None = None,
 ) -> CollaborationRequest:
     idea = await _get_idea_or_404(db, idea_id)
     if idea.author_id == current_user.id:
@@ -390,10 +394,12 @@ async def express_interest(
             detail="You already requested to join this project",
         )
 
+    note = (payload.message or "").strip() if payload else ""
     req = CollaborationRequest(
         from_user_id=current_user.id,
         to_user_id=idea.author_id,
         idea_id=idea_id,
+        message=note or None,
     )
     db.add(req)
     notif = _notify(
@@ -414,7 +420,7 @@ async def express_interest(
             idea.author_id,
             subject=f'{current_user.full_name} wants to join "{idea.title}"',
             headline=f'{current_user.full_name} asked to join your project "{idea.title}"',
-            preview=current_user.headline or None,
+            preview=note or current_user.headline or None,
             path="/activity",
             cta_label="Review request",
         )

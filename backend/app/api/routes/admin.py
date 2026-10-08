@@ -12,6 +12,7 @@ from app.models import (
     CollaborationRequest,
     Comment,
     Conversation,
+    GroupMessage,
     Idea,
     Message,
     Notification,
@@ -28,6 +29,7 @@ from app.schemas.admin import (
     AdminUserUpdate,
     AnnouncementCreate,
     DailyCount,
+    TeamFunnel,
     TopIdea,
 )
 
@@ -222,6 +224,95 @@ async def delete_idea(idea_id: int, db: DbSession, admin: AdminUser) -> None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Idea not found")
     await db.delete(idea)
     await db.commit()
+
+
+def _utc(ts: datetime) -> datetime:
+    """Treat naive timestamps (SQLite) as UTC so comparisons work everywhere."""
+    return ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
+
+
+@router.get("/funnel", response_model=TeamFunnel)
+async def funnel(db: DbSession, admin: AdminUser, days: int = Query(30, ge=7, le=365)) -> TeamFunnel:
+    """Sign-up -> activation -> join request -> accepted -> active team.
+    Computed in Python over the window (fine at current scale, DB-agnostic)."""
+    now = datetime.now(timezone.utc)
+    start = now - timedelta(days=days)
+
+    new_users = set((await db.scalars(select(User.id).where(User.created_at >= start))).all())
+    posters = set((await db.scalars(select(Idea.author_id).where(Idea.author_id.in_(new_users)))).all()) if new_users else set()
+    requesters = (
+        set((await db.scalars(select(CollaborationRequest.from_user_id).where(CollaborationRequest.from_user_id.in_(new_users)))).all())
+        if new_users
+        else set()
+    )
+
+    reqs = (
+        await db.execute(
+            select(
+                CollaborationRequest.idea_id,
+                CollaborationRequest.from_user_id,
+                CollaborationRequest.to_user_id,
+                CollaborationRequest.status,
+                CollaborationRequest.created_at,
+                CollaborationRequest.updated_at,
+            ).where(CollaborationRequest.created_at >= start)
+        )
+    ).all()
+    responded = [r for r in reqs if r.status != "pending"]
+    hours = sorted((_utc(r.updated_at) - _utc(r.created_at)).total_seconds() / 3600 for r in responded)
+    median = round(hours[len(hours) // 2], 1) if hours else None
+    accepted = [r for r in reqs if r.status == "accepted"]
+
+    # Who posted in which project group, and when (for "active team").
+    posts: dict[tuple[int, int], list[datetime]] = {}
+    if accepted:
+        for idea_id, sender_id, at in (
+            await db.execute(
+                select(GroupMessage.idea_id, GroupMessage.sender_id, GroupMessage.created_at).where(
+                    GroupMessage.idea_id.in_({r.idea_id for r in accepted}), GroupMessage.created_at >= start
+                )
+            )
+        ).all():
+            posts.setdefault((idea_id, sender_id), []).append(_utc(at))
+
+    def spoke_after(idea_id: int, user_id: int, since: datetime) -> bool:
+        return any(t >= since for t in posts.get((idea_id, user_id), []))
+
+    teams_active = sum(
+        1
+        for r in accepted
+        if spoke_after(r.idea_id, r.from_user_id, _utc(r.updated_at)) and spoke_after(r.idea_id, r.to_user_id, _utc(r.updated_at))
+    )
+
+    # Accepted requests per week over the last 8 weeks (by acceptance time).
+    week0 = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(weeks=7)
+    weekly = {(week0 + timedelta(weeks=i)).date().isoformat(): 0 for i in range(8)}
+    for (at,) in (
+        await db.execute(
+            select(CollaborationRequest.updated_at).where(
+                CollaborationRequest.status == "accepted", CollaborationRequest.updated_at >= week0
+            )
+        )
+    ).all():
+        key = (week0 + timedelta(weeks=(_utc(at) - week0).days // 7)).date().isoformat()
+        if key in weekly:
+            weekly[key] += 1
+
+    return TeamFunnel(
+        days=days,
+        signups=len(new_users),
+        posted=len(posters),
+        requested=len(requesters),
+        activated=len(posters | requesters),
+        requests=len(reqs),
+        accepted=len(accepted),
+        declined=sum(r.status == "declined" for r in reqs),
+        pending=sum(r.status == "pending" for r in reqs),
+        pending_over_48h=sum(r.status == "pending" and _utc(r.created_at) < now - timedelta(hours=48) for r in reqs),
+        median_response_hours=median,
+        teams_active=teams_active,
+        teams_by_week=[DailyCount(date=k, count=v) for k, v in weekly.items()],
+    )
 
 
 # --------------------------------------------------------------------------- #
