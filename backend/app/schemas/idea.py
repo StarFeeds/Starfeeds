@@ -99,6 +99,8 @@ class IdeaListResponse(BaseModel):
 
 class CommentCreate(BaseModel):
     body: str = Field(min_length=1, max_length=2000)
+    # Reply to this comment (a reply to a reply joins the same thread).
+    parent_id: int | None = None
 
 
 class CommentOut(BaseModel):
@@ -107,4 +109,5 @@ class CommentOut(BaseModel):
     id: int
     body: str
     created_at: datetime
+    parent_id: int | None = None
     author: UserPublic

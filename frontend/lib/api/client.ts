@@ -260,10 +260,11 @@ export const api = {
       return apiCall<Comment[]>(`/ideas/${ideaId}/comments`, { requiresAuth: true });
     },
 
-    addComment: async (ideaId: number, body: string): Promise<Comment> => {
+    /** Comment on an idea, or reply to a comment (parentId). */
+    addComment: async (ideaId: number, body: string, parentId?: number): Promise<Comment> => {
       return apiCall<Comment>(`/ideas/${ideaId}/comments`, {
         method: "POST",
-        body: JSON.stringify({ body }),
+        body: JSON.stringify({ body, parent_id: parentId ?? null }),
         requiresAuth: true,
       });
     },

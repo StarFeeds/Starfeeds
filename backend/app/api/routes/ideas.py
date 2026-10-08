@@ -322,30 +322,56 @@ async def create_comment(
     background_tasks: BackgroundTasks,
 ) -> Comment:
     idea = await _get_idea_or_404(db, idea_id)
-    comment = Comment(
-        body=payload.body, idea_id=idea_id, author_id=current_user.id
-    )
+
+    # Replying: thread under the top-level comment, but notify the person
+    # whose comment was actually replied to.
+    replied_to: Comment | None = None
+    parent_id: int | None = None
+    if payload.parent_id is not None:
+        replied_to = await db.scalar(
+            select(Comment).options(selectinload(Comment.author)).where(Comment.id == payload.parent_id)
+        )
+        if replied_to is None or replied_to.idea_id != idea_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
+        parent_id = replied_to.parent_id or replied_to.id
+
+    comment = Comment(body=payload.body, idea_id=idea_id, author_id=current_user.id, parent_id=parent_id)
     db.add(comment)
-    notif = _notify(
-        db,
-        recipient=idea.author,
-        actor_id=current_user.id,
-        type="comment",
-        text=f'commented on your idea "{idea.title}"',
-        idea_id=idea.id,
-    )
+
+    # (recipient, notification text, email subject, email headline)
+    targets = []
+    if replied_to is not None:
+        targets.append((
+            replied_to.author,
+            f'replied to your comment on "{idea.title}"',
+            f'{current_user.full_name} replied to your comment',
+            f'{current_user.full_name} replied to your comment on "{idea.title}"',
+        ))
+    if replied_to is None or replied_to.author_id != idea.author_id:
+        targets.append((
+            idea.author,
+            f'commented on your idea "{idea.title}"',
+            f'{current_user.full_name} commented on "{idea.title}"',
+            f'{current_user.full_name} commented on your idea "{idea.title}"',
+        ))
+    queued = []  # (notification, recipient id, email subject, email headline)
+    for recipient, text, subject, headline in targets:
+        notif = _notify(db, recipient=recipient, actor_id=current_user.id, type="comment", text=text, idea_id=idea.id)
+        if notif is not None:  # None = self-notification or recipient opted out
+            queued.append((notif, recipient.id, subject, headline))
+
     await db.commit()
     await db.refresh(comment, attribute_names=["author"])
-    if notif is not None:
+    for notif, recipient_id, subject, headline in queued:
         await db.refresh(notif)
-        await push_notification(idea.author_id, notif, current_user)
+        await push_notification(recipient_id, notif, current_user)
         background_tasks.add_task(
             send_activity_email,
-            idea.author_id,
-            subject=f'{current_user.full_name} commented on "{idea.title}"',
-            headline=f'{current_user.full_name} commented on your idea "{idea.title}"',
+            recipient_id,
+            subject=subject,
+            headline=headline,
             preview=payload.body,
-            path="/notifications",
+            path=f"/i/{idea.id}",
             cta_label="Reply on LikeMinds",
         )
     return comment

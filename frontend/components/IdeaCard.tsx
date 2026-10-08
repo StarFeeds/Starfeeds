@@ -51,6 +51,34 @@ function timeAgo(iso: string): string {
   return `${value}${unit} ago`;
 }
 
+/** One comment bubble with a "Reply" link (the viewer is in the card's scope). */
+function CommentBubble({ c, small, onReply }: { c: Comment; small?: boolean; onReply: () => void }) {
+  return (
+    <div className="flex items-start gap-3">
+      <Link href={`/u/${c.author.username}`} className="flex-shrink-0">
+        <Avatar src={c.author.avatar_url} name={c.author.full_name ?? c.author.username} size={small ? 26 : 32} />
+      </Link>
+      <div className="flex-1 min-w-0">
+        <div className="bg-neutral-50 rounded-xl px-3 py-2">
+          <Link
+            href={`/u/${c.author.username}`}
+            className="text-sm font-semibold text-neutral-900 hover:text-primary-700 transition"
+          >
+            {c.author.full_name}
+          </Link>
+          <p className="text-sm text-neutral-700 whitespace-pre-line break-words">{c.body}</p>
+        </div>
+        <div className="flex items-center gap-3 mt-0.5 px-3 text-xs text-neutral-500">
+          <span>{timeAgo(c.created_at)}</span>
+          <button onClick={onReply} className="font-semibold hover:text-primary-700 transition">
+            Reply
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Text with any http(s) URLs turned into links that open in the in-app viewer. */
 function Linkified({ text, onOpen }: { text: string; onOpen: (url: string) => void }) {
   return (
@@ -98,6 +126,9 @@ export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete, onGuestAc
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
+  // Reply box: which thread (top-level comment) and which comment it answers.
+  const [replyTo, setReplyTo] = useState<{ threadId: number; commentId: number } | null>(null);
+  const [replyDraft, setReplyDraft] = useState("");
 
   // Join a project's group
   const [joinStatus, setJoinStatus] = useState(idea.join_status);
@@ -157,6 +188,31 @@ export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete, onGuestAc
       setDraft("");
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Failed to comment");
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const startReply = (c: Comment) => {
+    if (onGuestAction) return onGuestAction("reply");
+    // Replies to replies stay in the same thread and mention the person.
+    const threadId = c.parent_id ?? c.id;
+    setReplyTo({ threadId, commentId: c.id });
+    setReplyDraft(c.parent_id && c.author.id !== user?.id ? `@${c.author.full_name} ` : "");
+  };
+
+  const postReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyTo || !replyDraft.trim()) return;
+    setPosting(true);
+    try {
+      const c = await api.ideas.addComment(idea.id, replyDraft.trim(), replyTo.commentId);
+      setComments((prev) => [...prev, c]);
+      setCommentCount((n) => n + 1);
+      setReplyDraft("");
+      setReplyTo(null);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to reply");
     } finally {
       setPosting(false);
     }
@@ -446,23 +502,40 @@ export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete, onGuestAc
           ) : comments.length === 0 ? (
             <p className="text-sm text-neutral-500">No comments yet. Start the conversation.</p>
           ) : (
-            <div className="space-y-3">
-              {comments.map((c) => (
-                <div key={c.id} className="flex items-start gap-3">
-                  <Link href={`/u/${c.author.username}`} className="flex-shrink-0">
-                    <Avatar src={c.author.avatar_url} name={c.author.full_name ?? c.author.username} size={32} />
-                  </Link>
-                  <div className="flex-1 min-w-0 bg-neutral-50 rounded-xl px-3 py-2">
-                    <Link
-                      href={`/u/${c.author.username}`}
-                      className="text-sm font-semibold text-neutral-900 hover:text-primary-700 transition"
-                    >
-                      {c.author.full_name}
-                    </Link>
-                    <p className="text-sm text-neutral-700">{c.body}</p>
+            <div className="space-y-4">
+              {comments
+                .filter((c) => !c.parent_id)
+                .map((top) => (
+                  <div key={top.id} className="space-y-2">
+                    <CommentBubble c={top} onReply={() => startReply(top)} />
+                    <div className="ml-11 space-y-2">
+                      {comments
+                        .filter((r) => r.parent_id === top.id)
+                        .map((r) => (
+                          <CommentBubble key={r.id} c={r} small onReply={() => startReply(r)} />
+                        ))}
+                      {replyTo?.threadId === top.id && (
+                        <form onSubmit={postReply} className="flex items-center gap-2">
+                          <input
+                            autoFocus
+                            value={replyDraft}
+                            onChange={(e) => setReplyDraft(e.target.value)}
+                            onKeyDown={(e) => e.key === "Escape" && setReplyTo(null)}
+                            placeholder={`Reply to ${comments.find((x) => x.id === replyTo.commentId)?.author.full_name ?? "comment"}…`}
+                            className="flex-1 h-9 px-4 bg-neutral-100 rounded-full text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          />
+                          <button
+                            type="submit"
+                            disabled={posting || !replyDraft.trim()}
+                            className="px-4 h-9 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white text-sm font-semibold rounded-full transition"
+                          >
+                            Reply
+                          </button>
+                        </form>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           )}
 

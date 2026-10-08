@@ -86,6 +86,10 @@ class Comment(Base, TimestampMixin):
     idea_id: Mapped[int] = mapped_column(
         ForeignKey("ideas.id", ondelete="CASCADE"), index=True
     )
+    # Set on replies: the top-level comment they belong to (one level deep).
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("comments.id", ondelete="CASCADE"), nullable=True, index=True
+    )
 
     author: Mapped["User"] = relationship(back_populates="comments")
     idea: Mapped["Idea"] = relationship(back_populates="comments")

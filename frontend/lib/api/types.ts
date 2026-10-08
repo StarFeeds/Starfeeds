@@ -41,6 +41,8 @@ export interface Comment {
   id: number;
   body: string;
   created_at: string;
+  /** Set on replies: the top-level comment they belong to. */
+  parent_id?: number | null;
   author: PublicUser;
 }
 
