@@ -165,6 +165,10 @@ export interface GroupSummary {
 }
 
 export interface AdminStats {
+  online_now: number;
+  online_users: { id: number; username: string; full_name: string }[];
+  active_today: number;
+  active_7d: number;
   users_total: number;
   users_active: number;
   users_admin: number;
@@ -192,6 +196,7 @@ export interface AdminUser {
   is_admin: boolean;
   is_active: boolean;
   is_online: boolean;
+  last_seen_at?: string | null;
   created_at: string;
   signup_ip: string | null;
   signup_location: string | null;

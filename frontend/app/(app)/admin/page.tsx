@@ -21,16 +21,20 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    const load = async () => {
       try {
         const s = await api.admin.stats();
         if (!cancelled) setStats(s);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load stats");
       }
-    })();
+    };
+    load();
+    // Keep "Online now" fresh while the dashboard is open.
+    const timer = setInterval(load, 30_000);
     return () => {
       cancelled = true;
+      clearInterval(timer);
     };
   }, []);
 
@@ -45,6 +49,25 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-4">
+      {/* Presence: live sockets right now, plus who came back recently. */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-white rounded-2xl border border-neutral-200 shadow-xs p-4">
+          <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide flex items-center gap-1.5">
+            <span className="relative flex w-2 h-2">
+              {stats.online_now > 0 && <span className="absolute inline-flex h-full w-full rounded-full bg-success-500 opacity-60 animate-ping" />}
+              <span className={`relative inline-flex w-2 h-2 rounded-full ${stats.online_now > 0 ? "bg-success-500" : "bg-neutral-300"}`} />
+            </span>
+            Online now
+          </p>
+          <p className="text-2xl font-bold text-neutral-900 mt-1">{stats.online_now}</p>
+          <p className="text-xs text-neutral-500 mt-0.5 truncate" title={stats.online_users.map((u) => u.full_name).join(", ")}>
+            {stats.online_users.length ? stats.online_users.map((u) => u.full_name).join(", ") : "Nobody right now"}
+          </p>
+        </div>
+        <Tile label="Active today" value={stats.active_today} hint="opened LikeMinds today" />
+        <Tile label="Active (7d)" value={stats.active_7d} hint={`of ${stats.users_total} users`} />
+      </div>
+
       <TeamFunnelPanel />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">

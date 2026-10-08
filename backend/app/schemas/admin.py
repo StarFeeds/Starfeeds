@@ -16,7 +16,18 @@ class TopIdea(BaseModel):
     upvotes: int
 
 
+class OnlineUser(BaseModel):
+    id: int
+    username: str
+    full_name: str
+
+
 class AdminStats(BaseModel):
+    # Presence (live sockets) and recent activity (users.last_seen_at).
+    online_now: int = 0
+    online_users: list[OnlineUser] = []
+    active_today: int = 0
+    active_7d: int = 0
     users_total: int
     users_active: int
     users_admin: int
@@ -46,6 +57,7 @@ class AdminUserOut(BaseModel):
     is_admin: bool
     is_active: bool
     is_online: bool
+    last_seen_at: datetime | None = None
     created_at: datetime
     signup_ip: str | None = None
     signup_location: str | None = None

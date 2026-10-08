@@ -29,6 +29,7 @@ from app.schemas.admin import (
     AdminUserUpdate,
     AnnouncementCreate,
     DailyCount,
+    OnlineUser,
     TeamFunnel,
     TopIdea,
 )
@@ -75,7 +76,21 @@ async def stats(db: DbSession, admin: AdminUser) -> AdminStats:
         if key in buckets:
             buckets[key] += 1
 
+    online = (
+        await db.execute(
+            select(User.id, User.username, User.full_name)
+            .where(User.is_online.is_(True))
+            .order_by(User.last_seen_at.desc())
+            .limit(20)
+        )
+    ).all()
+
     return AdminStats(
+        online_now=await _count(db, User, User.is_online.is_(True)),
+        online_users=[OnlineUser(id=r[0], username=r[1], full_name=r[2]) for r in online],
+        # Online now counts as active even if their session started earlier.
+        active_today=await _count(db, User, or_(User.is_online.is_(True), User.last_seen_at >= start_today)),
+        active_7d=await _count(db, User, or_(User.is_online.is_(True), User.last_seen_at >= start_7d)),
         users_total=await _count(db, User),
         users_active=await _count(db, User, User.is_active.is_(True)),
         users_admin=await _count(db, User, User.is_admin.is_(True)),

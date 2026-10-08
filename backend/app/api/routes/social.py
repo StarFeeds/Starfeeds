@@ -22,6 +22,7 @@ from app.models import (
     Notification,
     User,
 )
+from app.presence import set_presence
 from app.realtime import manager, push_message, push_notification
 from app.schemas.social import (
     ActivityItem,
@@ -425,7 +426,8 @@ async def realtime_ws(websocket: WebSocket, token: str = "") -> None:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
     user_id = int(subject)
-    await manager.connect(user_id, websocket)
+    if await manager.connect(user_id, websocket):
+        await set_presence(user_id, online=True)
     try:
         while True:
             # We don't expect inbound frames; receive to detect disconnects.
@@ -433,4 +435,5 @@ async def realtime_ws(websocket: WebSocket, token: str = "") -> None:
     except WebSocketDisconnect:
         pass
     finally:
-        await manager.disconnect(user_id, websocket)
+        if await manager.disconnect(user_id, websocket):
+            await set_presence(user_id, online=False)

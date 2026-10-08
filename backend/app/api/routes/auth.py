@@ -1,6 +1,7 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 import re
 import secrets
+from datetime import datetime, timezone
 
 from sqlalchemy import func, or_, select
 
@@ -59,7 +60,7 @@ async def register(
         full_name=payload.full_name,
         phone=payload.phone,
         hashed_password=hash_password(payload.password),
-        is_online=True,
+        last_seen_at=datetime.now(timezone.utc),
         is_admin=payload.email.lower() in settings.admin_emails_list,
         signup_ip=ip,
     )
@@ -88,7 +89,7 @@ async def login(payload: LoginRequest, db: DbSession) -> TokenPair:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="This account has been suspended.",
         )
-    user.is_online = True
+    user.last_seen_at = datetime.now(timezone.utc)
     # Keep admin status in sync with the ADMIN_EMAILS allowlist (bootstrap admins).
     if user.email.lower() in settings.admin_emails_list:
         user.is_admin = True
@@ -137,7 +138,7 @@ async def google_sign_in(
             avatar_url=claims.get("picture"),
             # No password: a random one nobody knows. "Forgot password" can set one later.
             hashed_password=hash_password(secrets.token_urlsafe(32)),
-            is_online=True,
+            last_seen_at=datetime.now(timezone.utc),
             is_admin=email.lower() in settings.admin_emails_list,
             signup_ip=ip,
         )
@@ -149,7 +150,7 @@ async def google_sign_in(
     else:
         if not user.is_active:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account has been suspended.")
-        user.is_online = True
+        user.last_seen_at = datetime.now(timezone.utc)
         if user.email.lower() in settings.admin_emails_list:
             user.is_admin = True
         if not user.avatar_url and claims.get("picture"):

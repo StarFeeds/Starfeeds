@@ -5,10 +5,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import admin, auth, groups, ideas, internal, links, search, social, unsubscribe, users
 from app.core.config import settings
+from app.presence import reset_presence
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await reset_presence()
     yield
 
 

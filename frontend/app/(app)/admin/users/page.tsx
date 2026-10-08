@@ -11,6 +11,18 @@ function fmtDate(iso: string): string {
   return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
+/** "Online now", "Seen 5m ago", "Seen 3h ago", "Seen 2d ago" or a date. */
+function lastSeen(u: { is_online: boolean; last_seen_at?: string | null }): string {
+  if (u.is_online) return "Online now";
+  if (!u.last_seen_at) return "Not seen yet";
+  const mins = Math.floor((Date.now() - new Date(u.last_seen_at).getTime()) / 60000);
+  if (mins < 1) return "Seen just now";
+  if (mins < 60) return `Seen ${mins}m ago`;
+  if (mins < 60 * 24) return `Seen ${Math.floor(mins / 60)}h ago`;
+  if (mins < 60 * 24 * 7) return `Seen ${Math.floor(mins / (60 * 24))}d ago`;
+  return `Seen ${fmtDate(u.last_seen_at)}`;
+}
+
 export default function AdminUsersPage() {
   const { user: me } = useAuth();
   const [q, setQ] = useState("");
@@ -100,6 +112,11 @@ export default function AdminUsersPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     {u.signup_location || u.signup_ip || "Unknown"}
+                  </span>
+                  {" · "}
+                  <span className={`inline-flex items-center gap-1 ${u.is_online ? "text-success-500 font-semibold" : ""}`}>
+                    <span className={`w-2 h-2 rounded-full ${u.is_online ? "bg-success-500" : "bg-neutral-300"}`} />
+                    {lastSeen(u)}
                   </span>
                 </p>
               </div>

@@ -19,16 +19,28 @@ class ConnectionManager:
         self._conns: dict[int, set[WebSocket]] = defaultdict(set)
         self._lock = asyncio.Lock()
 
-    async def connect(self, user_id: int, ws: WebSocket) -> None:
+    async def connect(self, user_id: int, ws: WebSocket) -> bool:
+        """Register a socket. True if it's the user's first (they just came online)."""
         await ws.accept()
         async with self._lock:
+            first = not self._conns.get(user_id)
             self._conns[user_id].add(ws)
+        return first
 
-    async def disconnect(self, user_id: int, ws: WebSocket) -> None:
+    async def disconnect(self, user_id: int, ws: WebSocket) -> bool:
+        """Drop a socket. True if it was the user's last (they just went offline)."""
         async with self._lock:
-            self._conns[user_id].discard(ws)
-            if not self._conns[user_id]:
+            conns = self._conns.get(user_id)
+            if conns is None:
+                return False
+            conns.discard(ws)
+            if not conns:
                 self._conns.pop(user_id, None)
+                return True
+            return False
+
+    def online_count(self) -> int:
+        return len(self._conns)
 
     def is_connected(self, user_id: int) -> bool:
         """Whether the user has LikeMinds open right now (a live socket)."""
@@ -39,7 +51,11 @@ class ConnectionManager:
             try:
                 await ws.send_json(payload)
             except Exception:
-                await self.disconnect(user_id, ws)
+                # Dead socket: drop it, and if it was their last, they're offline.
+                if await self.disconnect(user_id, ws):
+                    from app.presence import set_presence  # avoid import cycle at load
+
+                    await set_presence(user_id, online=False)
 
 
 manager = ConnectionManager()
