@@ -106,3 +106,28 @@ export function hostOf(url: string): string {
     return url;
   }
 }
+
+/** Length limits for posts (the API enforces the same ceilings). */
+export const LIMITS = { title: 80, description: 400, detail: 200 } as const;
+
+/**
+ * Plain-text version of pasted (often AI-written) text: drops markdown
+ * headings, bold/italics, bullet symbols and code fences, unwraps links,
+ * and collapses big gaps. Line breaks are kept so lists still read.
+ */
+export function cleanPastedText(text: string): string {
+  return text
+    .replace(/\r\n?/g, "\n")
+    .replace(/^```.*$/gm, "")
+    .replace(/^[ \t]{0,3}#{1,6}[ \t]+/gm, "") // # Headings
+    .replace(/^[ \t]*>[ \t]?/gm, "") // > quotes
+    .replace(/^[ \t]*([-*+•▪◦●–]|\d+[.)])[ \t]+/gm, "") // bullets / numbered lists
+    .replace(/\*\*(.+?)\*\*|__(.+?)__/g, "$1$2") // **bold** / __bold__
+    .replace(/(^|[\s(])[*_](\S(?:.*?\S)?)[*_](?=[\s).,!?:;]|$)/gm, "$1$2") // *italic*
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, "$1 ($2)") // [text](url)
+    .replace(/^[ \t]*([-*_][ \t]*){3,}$/gm, "") // --- rules
+    .replace(/[ \t]+$/gm, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}

@@ -21,6 +21,8 @@ from app.schemas.idea import (
     IdeaListResponse,
     IdeaOut,
     IdeaUpdate,
+    BODY_MAX,
+    TITLE_MAX,
 )
 from app.realtime import push_notification
 from app.schemas.social import CollaborationRequestOut, JoinRequestIn
@@ -193,7 +195,12 @@ async def update_idea(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only edit your own ideas",
         )
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    changes = payload.model_dump(exclude_unset=True)
+    if changes.get("title") not in (None, idea.title) and len(changes["title"]) > TITLE_MAX:
+        raise HTTPException(status_code=422, detail=f"Keep the name under {TITLE_MAX} characters")
+    if changes.get("body") not in (None, idea.body) and len(changes["body"]) > BODY_MAX:
+        raise HTTPException(status_code=422, detail="That's too long. Keep it to a short pitch.")
+    for field, value in changes.items():
         # project_url / looking_for may be cleared; the other fields can't be null.
         if value is None and field not in ("project_url", "looking_for"):
             continue

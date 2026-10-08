@@ -34,9 +34,15 @@ def _clean_roles(v: list[str] | None) -> list[str] | None:
     return out[:6]
 
 
+# Posts are short pitches: the composer allows a 400-char description plus
+# three optional 200-char details; this is the composed body's ceiling.
+TITLE_MAX = 80
+BODY_MAX = 1100
+
+
 class IdeaCreate(BaseModel):
-    title: str = Field(min_length=1, max_length=200)
-    body: str = Field(min_length=1)
+    title: str = Field(min_length=1, max_length=TITLE_MAX)
+    body: str = Field(min_length=1, max_length=BODY_MAX)
     category: str = Field(default="General", max_length=80)
     visibility: str = Field(default="public", pattern="^(public|private)$")
     project_url: str | None = Field(default=None, max_length=500)
@@ -50,6 +56,8 @@ class IdeaUpdate(BaseModel):
     """Partial update by the author; omitted fields are left unchanged.
     Send project_url as "" or null to remove the link."""
 
+    # Length limits for edits are checked in the route, so older long posts
+    # can still be edited without touching their text.
     title: str | None = Field(default=None, min_length=1, max_length=200)
     body: str | None = Field(default=None, min_length=1)
     category: str | None = Field(default=None, max_length=80)

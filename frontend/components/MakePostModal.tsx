@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api/client";
 import type { Idea } from "@/lib/api/types";
-import { DETAIL_FIELDS, EMPTY_DETAILS, composeBody, splitBody } from "@/lib/ideaBody";
+import { DETAIL_FIELDS, EMPTY_DETAILS, LIMITS, cleanPastedText, composeBody, splitBody } from "@/lib/ideaBody";
 import { ROLES } from "@/lib/share";
 import { ShareOptions } from "@/components/ShareMenu";
 
@@ -17,6 +17,43 @@ const CATEGORIES = [
 ];
 
 type Visibility = "public" | "private";
+
+/** "n/max" once a field nears its limit; red when over. */
+function Counter({ value, max }: { value: string; max: number }) {
+  const n = value.trim().length;
+  if (n < max * 0.8) return null;
+  return (
+    <span className={`text-xs font-semibold ${n > max ? "text-destructive-500" : "text-amber-600"}`}>
+      {n}/{max}
+    </span>
+  );
+}
+
+/**
+ * Paste as clean plain text (strips AI-style markdown) at the cursor.
+ * Returns the new value so callers can react to long pastes.
+ */
+function pasteClean(
+  e: React.ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+  value: string,
+  set: (v: string) => void,
+  singleLine = false,
+): string | null {
+  const raw = e.clipboardData.getData("text/plain");
+  if (!raw) return null;
+  let clean = cleanPastedText(raw);
+  if (singleLine) clean = clean.replace(/\s*\n+\s*/g, " ");
+  e.preventDefault();
+  const el = e.currentTarget;
+  const start = el.selectionStart ?? value.length;
+  const end = el.selectionEnd ?? value.length;
+  const next = value.slice(0, start) + clean + value.slice(end);
+  set(next);
+  requestAnimationFrame(() => {
+    el.selectionStart = el.selectionEnd = start + clean.length;
+  });
+  return next;
+}
 
 interface MakePostModalProps {
   open: boolean;
@@ -56,6 +93,8 @@ export function MakePostModal({ open, onClose, onCreated, idea, onSaved }: MakeP
   // Set after a successful post: the modal switches to a "share it" step.
   const [created, setCreated] = useState<Idea | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Shown after a long paste into the description, until it's trimmed.
+  const [longPaste, setLongPaste] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -71,7 +110,16 @@ export function MakePostModal({ open, onClose, onCreated, idea, onSaved }: MakeP
 
   if (!open) return null;
 
-  const canPost = title.trim() !== "" && description.trim() !== "";
+  // Keep posts to a skimmable pitch; say exactly what's over the limit.
+  const overLimit =
+    title.trim().length > LIMITS.title
+      ? `Shorten the name to ${LIMITS.title} characters.`
+      : description.trim().length > LIMITS.description
+        ? `Trim the description to ${LIMITS.description} characters (it's ${description.trim().length}).`
+        : DETAIL_FIELDS.find(({ key }) => details[key].trim().length > LIMITS.detail)
+          ? `Keep each detail under ${LIMITS.detail} characters.`
+          : null;
+  const canPost = title.trim() !== "" && description.trim() !== "" && !overLimit;
 
   const close = () => {
     setCreated(null);
@@ -96,7 +144,7 @@ export function MakePostModal({ open, onClose, onCreated, idea, onSaved }: MakeP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canPost) {
-      setError("Add a name and a short description to post.");
+      setError(overLimit ?? "Add a name and a short description to post.");
       return;
     }
     const input = {
@@ -183,19 +231,35 @@ export function MakePostModal({ open, onClose, onCreated, idea, onSaved }: MakeP
             aria-label="Project name"
             className={`${fieldCls} h-12 text-base font-semibold placeholder:font-normal`}
             placeholder="Give it a name, e.g. Uber for laundry in Lagos"
-            maxLength={200}
+            maxLength={LIMITS.title}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
 
-          <textarea
-            aria-label="Description"
-            className={`${fieldCls} py-3 resize-none`}
-            rows={4}
-            placeholder="What are you building, and who's it for?"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
+          <div>
+            <textarea
+              aria-label="Description"
+              className={`${fieldCls} py-3 resize-none ${description.trim().length > LIMITS.description ? "border-destructive-500" : ""}`}
+              rows={4}
+              placeholder="What are you building, and who's it for? 2–4 sentences."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              onPaste={(e) => {
+                const next = pasteClean(e, description, setDescription);
+                if (next && next.trim().length > LIMITS.description) setLongPaste(true);
+              }}
+            />
+            <div className="flex items-start justify-between gap-3 mt-1">
+              <p className="text-xs text-neutral-500">Keep it short. People skim the feed.</p>
+              <Counter value={description} max={LIMITS.description} />
+            </div>
+            {longPaste && description.trim().length > LIMITS.description && (
+              <p className="mt-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+                That&apos;s a lot of text. Keep the 2–3 sentences that matter most: what you&apos;re building and who
+                it&apos;s for. You can share the rest with your team in the project group.
+              </p>
+            )}
+          </div>
 
           <div className="relative">
             <svg
@@ -290,18 +354,26 @@ export function MakePostModal({ open, onClose, onCreated, idea, onSaved }: MakeP
               <div className="mt-3 space-y-3">
                 {DETAIL_FIELDS.map(({ key, heading, placeholder }) => (
                   <div key={key}>
-                    <label className="block text-xs font-semibold text-neutral-500 mb-1">{heading}</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-neutral-500">{heading}</label>
+                      <Counter value={details[key]} max={LIMITS.detail} />
+                    </div>
                     <input
-                      className={`${fieldCls} h-11`}
+                      className={`${fieldCls} h-11 ${details[key].trim().length > LIMITS.detail ? "border-destructive-500" : ""}`}
                       placeholder={placeholder}
                       value={details[key]}
                       onChange={(e) => setDetails((d) => ({ ...d, [key]: e.target.value }))}
+                      onPaste={(e) =>
+                        pasteClean(e, details[key], (v) => setDetails((d) => ({ ...d, [key]: v })), true)
+                      }
                     />
                   </div>
                 ))}
               </div>
             )}
           </div>
+
+          {overLimit && <p className="text-sm font-semibold text-destructive-500">{overLimit}</p>}
 
           <div className="flex items-center justify-between gap-3 pt-2 border-t border-neutral-100">
             <select
