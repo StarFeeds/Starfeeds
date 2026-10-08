@@ -9,7 +9,8 @@ export const contentType = "image/png";
 export default async function Image({ params }: { params: Promise<{ id: string }> }) {
   const idea = await fetchPublicIdea((await params).id);
   const title = idea?.title ?? "Find people to build with";
-  const roles = idea?.looking_for ?? [];
+  // A closed team isn't recruiting, so the card shouldn't advertise roles.
+  const roles = idea && !idea.team_closed ? idea.looking_for ?? [] : [];
   const blurb = idea ? summarize(idea.body, 140) : "Share what you're building on LikeMinds.";
 
   return new ImageResponse(

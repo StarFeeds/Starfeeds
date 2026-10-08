@@ -28,6 +28,8 @@ export default function ProjectDiscussionPage() {
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -80,8 +82,52 @@ export default function ProjectDiscussionPage() {
     const body = draft.trim();
     if (!body) return;
     setDraft("");
-    const msg = await api.groups.sendMessage(ideaId, body);
-    setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
+    try {
+      const msg = await api.groups.sendMessage(ideaId, body);
+      setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
+    } catch (err) {
+      setDraft(body);
+      setNotice(err instanceof Error ? err.message : "Couldn't send your message");
+    }
+  };
+
+  const isOwner = !!group?.is_owner;
+
+  const toggleTeam = async () => {
+    if (!group) return;
+    const closing = !group.team_closed;
+    if (
+      closing &&
+      !confirm("Close the team? People can't request to join anymore, and anyone still waiting gets a polite note. You can reopen anytime.")
+    )
+      return;
+    try {
+      if (closing) {
+        const r = await api.groups.closeTeam(ideaId);
+        setNotice(
+          r.declined
+            ? `Team closed. ${r.declined} pending request${r.declined === 1 ? " was" : "s were"} declined politely.`
+            : "Team closed. No new join requests.",
+        );
+      } else {
+        await api.groups.reopenTeam(ideaId);
+        setNotice("Team reopened. People can request to join again.");
+      }
+      setGroup({ ...group, team_closed: closing });
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Couldn't update the team");
+    }
+  };
+
+  const removeMember = async (m: PublicUser) => {
+    if (!confirm(`Remove ${m.full_name} from this project? They'll lose access to the group and can't request to join again.`)) return;
+    try {
+      await api.groups.removeMember(ideaId, m.id);
+      setMembers((prev) => prev.filter((x) => x.id !== m.id));
+      setNotice(`${m.full_name} was removed from the group.`);
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Couldn't remove member");
+    }
   };
 
   return (
@@ -111,16 +157,70 @@ export default function ProjectDiscussionPage() {
                   <h1 className="font-bold text-neutral-900 truncate">{group?.title}</h1>
                   <p className="text-xs text-neutral-500">
                     {members.length} {members.length === 1 ? "member" : "members"}
+                    {group?.team_closed && <span className="ml-2 font-semibold text-success-500">✓ Team complete</span>}
                   </p>
                 </div>
-                <div className="flex -space-x-2 flex-shrink-0">
-                  {members.slice(0, 6).map((m) => (
-                    <Link key={m.id} href={`/u/${m.username}`} className="ring-2 ring-white rounded-full">
-                      <Avatar src={m.avatar_url} name={m.full_name} size={28} />
-                    </Link>
-                  ))}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => setShowMembers((v) => !v)}
+                    aria-expanded={showMembers}
+                    className="flex items-center gap-2 h-9 pl-1 pr-3 rounded-full hover:bg-neutral-100 transition"
+                  >
+                    <span className="flex -space-x-2">
+                      {members.slice(0, 4).map((m) => (
+                        <span key={m.id} className="ring-2 ring-white rounded-full">
+                          <Avatar src={m.avatar_url} name={m.full_name} size={26} />
+                        </span>
+                      ))}
+                    </span>
+                    <span className="text-xs font-semibold text-neutral-700">Members</span>
+                  </button>
+                  {isOwner && (
+                    <button
+                      onClick={toggleTeam}
+                      className="h-9 px-3 rounded-full border border-neutral-300 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition"
+                    >
+                      {group?.team_closed ? "Reopen team" : "Close team"}
+                    </button>
+                  )}
                 </div>
               </div>
+              {notice && (
+                <p className="mt-3 px-3 py-2 rounded-lg bg-primary-50 text-sm text-primary-700 flex items-start justify-between gap-2">
+                  {notice}
+                  <button onClick={() => setNotice(null)} className="text-primary-500 hover:text-primary-700" aria-label="Dismiss">
+                    ✕
+                  </button>
+                </p>
+              )}
+              {showMembers && (
+                <ul className="mt-3 divide-y divide-neutral-100 border border-neutral-200 rounded-xl">
+                  {members.map((m, i) => (
+                    <li key={m.id} className="flex items-center gap-3 px-3 py-2">
+                      <Link href={`/u/${m.username}`} className="flex items-center gap-3 flex-1 min-w-0 group">
+                        <Avatar src={m.avatar_url} name={m.full_name} size={30} />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold text-neutral-900 truncate group-hover:text-primary-700">
+                            {m.full_name}
+                            {m.id === user?.id && <span className="font-normal text-neutral-500"> (you)</span>}
+                          </span>
+                          <span className="block text-xs text-neutral-500 truncate">
+                            {i === 0 ? "Owner" : m.headline}
+                          </span>
+                        </span>
+                      </Link>
+                      {isOwner && m.id !== user?.id && (
+                        <button
+                          onClick={() => removeMember(m)}
+                          className="h-8 px-3 rounded-full text-xs font-semibold text-destructive-500 hover:bg-destructive-500/5 transition"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {/* Messages */}

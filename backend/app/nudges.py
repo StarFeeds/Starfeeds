@@ -75,7 +75,7 @@ async def _fresh_projects(db, now: datetime) -> list[Project]:
     votes = func.count(Upvote.id)
     rows = (
         await db.execute(
-            select(Idea.id, Idea.title, User.full_name, Idea.looking_for, votes)
+            select(Idea.id, Idea.title, User.full_name, Idea.looking_for, votes, Idea.team_closed)
             .join(User, User.id == Idea.author_id)
             .outerjoin(Upvote, Upvote.idea_id == Idea.id)
             .where(Idea.created_at >= now - FRESH_PROJECTS, Idea.visibility == "public", Idea.hidden.is_(False))
@@ -84,7 +84,8 @@ async def _fresh_projects(db, now: datetime) -> list[Project]:
             .limit(30)
         )
     ).all()
-    projects = [Project(r[0], r[1], r[2], list(r[3] or []), r[4]) for r in rows]
+    # A closed team isn't recruiting, so don't advertise its roles.
+    projects = [Project(r[0], r[1], r[2], [] if r[5] else list(r[3] or []), r[4]) for r in rows]
     projects.sort(key=lambda p: (not p.roles, -p.upvotes))
     return projects
 

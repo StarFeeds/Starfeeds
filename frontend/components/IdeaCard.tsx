@@ -145,6 +145,25 @@ export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete, onGuestAc
     }
   };
 
+  const toggleTeam = async () => {
+    setMenuOpen(false);
+    const closing = !idea.team_closed;
+    if (
+      closing &&
+      !window.confirm(
+        "Close the team? People can't request to join anymore, and anyone still waiting gets a polite \"not adding members right now\". You can reopen anytime.",
+      )
+    )
+      return;
+    try {
+      if (closing) await api.groups.closeTeam(idea.id);
+      else await api.groups.reopenTeam(idea.id);
+      setEdits((prev) => ({ ...prev, team_closed: closing }));
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Couldn't update the team");
+    }
+  };
+
   const handleDelete = async () => {
     setMenuOpen(false);
     if (!window.confirm("Delete this idea? This cannot be undone.")) return;
@@ -298,6 +317,15 @@ export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete, onGuestAc
                     Edit idea
                   </button>
                   <button
+                    onClick={toggleTeam}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={idea.team_closed ? "M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" : "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"} />
+                    </svg>
+                    {idea.team_closed ? "Reopen team" : "Close team"}
+                  </button>
+                  <button
                     onClick={handleDelete}
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm font-semibold text-destructive-500 hover:bg-destructive-500/5 transition"
                   >
@@ -319,10 +347,15 @@ export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete, onGuestAc
           {idea.title}
         </Link>
       </h3>
-      <p className="text-xs font-bold text-secondary-700 uppercase tracking-wide mb-3">
+      <p className="text-xs font-bold text-secondary-700 uppercase tracking-wide mb-3 flex items-center gap-2">
         {idea.category}
+        {idea.team_closed && (
+          <span className="normal-case tracking-normal px-2 py-0.5 rounded-full bg-success-500/10 text-success-500 font-semibold">
+            ✓ Team complete
+          </span>
+        )}
       </p>
-      {idea.looking_for?.length > 0 && (
+      {!idea.team_closed && idea.looking_for?.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 mb-3">
           <span className="text-xs font-semibold text-neutral-500">Looking for</span>
           {idea.looking_for.map((role) => (
@@ -457,6 +490,17 @@ export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete, onGuestAc
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l3.586-3.586z" />
             </svg>
             <span className="hidden sm:inline">Discussion</span>
+          </button>
+        ) : idea.team_closed ? (
+          <button
+            disabled
+            title="The owner isn't taking new members right now"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-neutral-400 cursor-not-allowed"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span className="hidden sm:inline">Team complete</span>
           </button>
         ) : (
           <button

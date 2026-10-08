@@ -102,3 +102,4 @@ class GroupSummary(BaseModel):
     title: str
     member_count: int
     is_owner: bool
+    team_closed: bool = False

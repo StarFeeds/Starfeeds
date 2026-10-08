@@ -71,6 +71,7 @@ class IdeaOut(BaseModel):
     visibility: str
     project_url: str | None = None
     looking_for: list[str] = []
+    team_closed: bool = False
     created_at: datetime
     updated_at: datetime
     author: UserPublic

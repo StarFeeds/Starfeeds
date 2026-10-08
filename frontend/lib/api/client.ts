@@ -432,6 +432,15 @@ export const api = {
         body: JSON.stringify({ body }),
         requiresAuth: true,
       }),
+    /** Owner: stop taking join requests (pending ones are declined politely). */
+    closeTeam: async (ideaId: number): Promise<{ team_closed: boolean; declined: number }> =>
+      apiCall<{ team_closed: boolean; declined: number }>(`/ideas/${ideaId}/team/close`, { method: "POST", requiresAuth: true }),
+    reopenTeam: async (ideaId: number): Promise<{ team_closed: boolean }> =>
+      apiCall<{ team_closed: boolean }>(`/ideas/${ideaId}/team/reopen`, { method: "POST", requiresAuth: true }),
+    /** Owner: remove someone from the project group. */
+    removeMember: async (ideaId: number, userId: number): Promise<void> => {
+      await apiCall<void>(`/ideas/${ideaId}/members/${userId}`, { method: "DELETE", requiresAuth: true });
+    },
   },
 
   admin: {

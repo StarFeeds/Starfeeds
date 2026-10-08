@@ -395,6 +395,23 @@ async def express_interest(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You own this project",
         )
+    if idea.team_closed:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This team isn't taking new members right now",
+        )
+    was_removed = await db.scalar(
+        select(CollaborationRequest.id).where(
+            CollaborationRequest.idea_id == idea_id,
+            CollaborationRequest.from_user_id == current_user.id,
+            CollaborationRequest.status == "removed",
+        )
+    )
+    if was_removed is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You can't request to join this project again",
+        )
 
     already_member = await db.scalar(
         select(GroupMember).where(

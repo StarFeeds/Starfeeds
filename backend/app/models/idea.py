@@ -24,6 +24,8 @@ class Idea(Base, TimestampMixin):
     project_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # Roles the author wants to recruit, e.g. ["Developer", "Designer"].
     looking_for: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    # Owner has the team they need: no new join requests ("Team complete").
+    team_closed: Mapped[bool] = mapped_column(default=False, server_default=sa.false())
     # Admin-moderation: hidden ideas are excluded from public feed & search.
     hidden: Mapped[bool] = mapped_column(default=False, server_default=sa.false())
 

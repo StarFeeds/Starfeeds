@@ -107,6 +107,8 @@ export interface Idea {
   visibility: string;
   project_url: string | null;
   looking_for: string[];
+  /** Owner has the team they need: no new join requests. */
+  team_closed?: boolean;
   created_at: string;
   updated_at: string;
   author: User;
@@ -168,6 +170,7 @@ export interface GroupSummary {
   title: string;
   member_count: number;
   is_owner: boolean;
+  team_closed?: boolean;
 }
 
 export interface AdminStats {

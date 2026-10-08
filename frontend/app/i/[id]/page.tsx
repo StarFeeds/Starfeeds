@@ -8,7 +8,11 @@ type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const idea = await fetchPublicIdea((await params).id);
   if (!idea) return { title: "Project · LikeMinds" };
-  const roles = idea.looking_for?.length ? `Looking for: ${idea.looking_for.join(", ")}. ` : "";
+  const roles = idea.team_closed
+    ? "Team complete. "
+    : idea.looking_for?.length
+      ? `Looking for: ${idea.looking_for.join(", ")}. `
+      : "";
   const description = roles + summarize(idea.body);
   return {
     title: `${idea.title} · LikeMinds`,
