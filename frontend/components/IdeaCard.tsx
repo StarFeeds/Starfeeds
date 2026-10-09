@@ -51,58 +51,6 @@ function timeAgo(iso: string): string {
   return `${value}${unit} ago`;
 }
 
-/** "a"/"an" + role, e.g. "a Marketer", "an Investor". */
-function withArticle(role: string): string {
-  return `${/^[aeiou]/i.test(role) ? "an" : "a"} ${role}`;
-}
-
-/**
- * Team status instead of a bare "1 member": solo founders show what they're
- * recruiting for; real teams show faces; closed teams show they're complete.
- */
-function TeamLabel({ idea }: { idea: Idea }) {
-  const n = idea.member_count;
-  const roles = idea.team_closed ? [] : idea.looking_for ?? [];
-  const faces = (idea.member_preview ?? []).slice(0, 3);
-  if (n <= 1) {
-    return (
-      <span className="flex items-center gap-1.5 min-w-0">
-        <svg className="w-4 h-4 text-neutral-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
-        {/* Phones get the short form so the useful part isn't truncated. */}
-        <span className="truncate sm:hidden">
-          {idea.team_closed
-            ? "Solo founder"
-            : roles.length
-              ? `Needs ${withArticle(roles[0])}${roles.length > 1 ? ` +${roles.length - 1}` : ""}`
-              : "Open to collaborators"}
-        </span>
-        <span className="truncate hidden sm:inline">
-          Solo founder
-          {idea.team_closed
-            ? ""
-            : roles.length
-              ? ` · looking for ${withArticle(roles[0])}${roles.length > 1 ? ` +${roles.length - 1}` : ""}`
-              : " · open to collaborators"}
-        </span>
-      </span>
-    );
-  }
-  return (
-    <span className="flex items-center gap-2">
-      <span className="flex -space-x-2">
-        {faces.map((m) => (
-          <span key={m.id} className="ring-2 ring-white rounded-full" title={m.full_name}>
-            <Avatar src={m.avatar_url} name={m.full_name} size={22} />
-          </span>
-        ))}
-      </span>
-      {n} on the team
-    </span>
-  );
-}
-
 /** One comment bubble with a "Reply" link (the viewer is in the card's scope). */
 function CommentBubble({ c, small, onReply }: { c: Comment; small?: boolean; onReply: () => void }) {
   return (
@@ -485,19 +433,9 @@ export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete, onGuestAc
         </a>
       )}
 
-      {isOwner && !idea.team_closed && !(idea.looking_for?.length > 0) && (
-        <button
-          onClick={() => setEditOpen(true)}
-          className="mb-3 w-full text-left px-3 py-2 rounded-lg bg-primary-50 text-sm text-primary-700 hover:bg-primary-100 transition"
-        >
-          <span className="font-semibold">Add the roles you need →</span> posts that say who they&apos;re looking for get more
-          join requests.
-        </button>
-      )}
-
       {/* Stats */}
-      <div className="flex items-center justify-between gap-3 text-sm text-neutral-600 mb-3">
-        <div className="flex items-center gap-4 min-w-0">
+      <div className="flex items-center justify-between text-sm text-neutral-600 mb-3">
+        <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-primary-500 to-secondary-500">
               <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -506,9 +444,14 @@ export function IdeaCard({ idea: ideaProp, onUpvote, onSave, onDelete, onGuestAc
             </span>
             <span className="font-semibold text-neutral-900">{idea.upvote_count}</span>
           </div>
-          <TeamLabel idea={idea} />
+          <span className="flex items-center gap-1.5">
+            <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4z" />
+            </svg>
+            {idea.member_count} {idea.member_count === 1 ? "member" : "members"}
+          </span>
         </div>
-        <button onClick={gate("see comments", toggleComments)} className="hover:text-neutral-900 transition flex-shrink-0">
+        <button onClick={gate("see comments", toggleComments)} className="hover:text-neutral-900 transition">
           {commentCount} Comments
         </button>
       </div>

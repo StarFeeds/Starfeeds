@@ -90,8 +90,6 @@ class IdeaOut(BaseModel):
     saved_by_me: bool = False
     upvoted_by_me: bool = False
     member_count: int = 0
-    # First few team members (owner first), for the card's avatars.
-    member_preview: list[UserPublic] = []
     # none | pending | member | owner
     join_status: str = "none"
 

@@ -118,8 +118,6 @@ export interface Idea {
   upvoted_by_me: boolean;
   hidden?: boolean;
   member_count: number;
-  /** First few team members, owner first. */
-  member_preview?: PublicUser[];
   join_status: "none" | "pending" | "member" | "owner";
 }
 
