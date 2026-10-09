@@ -25,6 +25,7 @@ from app.schemas.idea import (
     TITLE_MAX,
 )
 from app.realtime import push_notification
+from app.schemas.user import UserPublic
 from app.schemas.social import CollaborationRequestOut, JoinRequestIn
 
 router = APIRouter(prefix="/ideas", tags=["ideas"])
@@ -77,7 +78,18 @@ async def _serialize(db: DbSession, idea: Idea, viewer_id: int | None) -> IdeaOu
         ):
             join_status = "pending"
 
+    preview = (
+        await db.scalars(
+            select(User)
+            .join(GroupMember, GroupMember.user_id == User.id)
+            .where(GroupMember.idea_id == idea.id)
+            .order_by(GroupMember.created_at.asc())
+            .limit(4)
+        )
+    ).all()
+
     out = IdeaOut.model_validate(idea)
+    out.member_preview = [UserPublic.model_validate(u) for u in preview]
     out.upvote_count = upvote_count or 0
     out.comment_count = comment_count or 0
     out.upvoted_by_me = upvoted
