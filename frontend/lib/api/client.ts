@@ -251,6 +251,11 @@ export const api = {
       return apiCall<IdeaListResponse>(`/ideas?${params}`);
     },
 
+    /** Today's "Idea of the day" (null if there's nothing to feature). */
+    featured: async (auth = false): Promise<Idea | null> => {
+      return apiCall<Idea | null>("/ideas/featured", { requiresAuth: auth });
+    },
+
     /** One idea (its shareable page). Pass auth=true when logged in for per-viewer state. */
     get: async (ideaId: number, auth = false): Promise<Idea> => {
       return apiCall<Idea>(`/ideas/${ideaId}`, { requiresAuth: auth });
@@ -320,6 +325,16 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ token }),
       });
+    },
+  },
+
+  push: {
+    publicKey: async (): Promise<string | null> => (await apiCall<{ key: string | null }>("/push/public-key")).key,
+    subscribe: async (sub: PushSubscriptionJSON): Promise<void> => {
+      await apiCall<void>("/push/subscribe", { method: "POST", body: JSON.stringify(sub), requiresAuth: true });
+    },
+    unsubscribe: async (endpoint: string): Promise<void> => {
+      await apiCall<void>("/push/unsubscribe", { method: "POST", body: JSON.stringify({ endpoint }), requiresAuth: true });
     },
   },
 
@@ -493,6 +508,11 @@ export const api = {
         body: JSON.stringify({ text, email }),
         requiresAuth: true,
       }),
+    /** Today's Idea of the day, and choosing it. */
+    featured: async (): Promise<{ idea_id: number | null }> =>
+      apiCall<{ idea_id: number | null }>("/admin/featured", { requiresAuth: true }),
+    setFeatured: async (ideaId: number): Promise<{ idea_id: number }> =>
+      apiCall<{ idea_id: number }>(`/admin/featured/${ideaId}`, { method: "POST", requiresAuth: true }),
     /** Inactive members (joined 30+ days ago) the catch-up email would reach. */
     catchUpPreview: async (): Promise<{ eligible: number; email_enabled: boolean }> =>
       apiCall<{ eligible: number; email_enabled: boolean }>("/admin/nudges/catch-up", { requiresAuth: true }),

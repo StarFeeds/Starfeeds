@@ -3,6 +3,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import selectinload
 
 from app.activity_email import send_activity_email
+from app.featured import featured_idea_id
 from app.api.deps import CurrentUser, DbSession, OptionalUser
 from app.models import (
     CollaborationRequest,
@@ -172,6 +173,17 @@ async def _get_idea_or_404(db: DbSession, idea_id: int) -> Idea:
     if idea is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Idea not found")
     return idea
+
+
+@router.get("/featured", response_model=IdeaOut | None)
+async def featured_idea(db: DbSession, viewer: OptionalUser) -> IdeaOut | None:
+    """Today's 'Idea of the day' (null when there's nothing to feature).
+    Declared before /{idea_id} so "featured" isn't parsed as an id."""
+    idea_id = await featured_idea_id(db)
+    if idea_id is None:
+        return None
+    idea = await _get_idea_or_404(db, idea_id)
+    return await _serialize(db, idea, viewer.id if viewer else None)
 
 
 @router.get("/{idea_id}", response_model=IdeaOut)

@@ -5,6 +5,7 @@ from sqlalchemy import desc, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app.announcement_email import send_announcement_emails
+from app.featured import featured_idea_id, set_featured
 from app.nudges import catch_up_audience, inactive_condition, send_catch_up
 from app.api.deps import AdminUser, DbSession
 from app.core.config import settings
@@ -332,6 +333,22 @@ async def funnel(db: DbSession, admin: AdminUser, days: int = Query(30, ge=7, le
         nudged_acted=await _count(db, User, User.last_nudge_at >= start, ~inactive_condition()),
         teams_by_week=[DailyCount(date=k, count=v) for k, v in weekly.items()],
     )
+
+
+@router.get("/featured")
+async def get_featured(db: DbSession, admin: AdminUser) -> dict:
+    """Today's Idea of the day (auto-picked if you haven't chosen one)."""
+    return {"idea_id": await featured_idea_id(db)}
+
+
+@router.post("/featured/{idea_id}")
+async def feature_idea(idea_id: int, db: DbSession, admin: AdminUser) -> dict:
+    """Make this post today's Idea of the day."""
+    idea = await db.get(Idea, idea_id)
+    if idea is None or idea.hidden or idea.visibility != "public":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only public, visible posts can be featured")
+    await set_featured(db, idea_id)
+    return {"idea_id": idea_id}
 
 
 @router.get("/nudges/catch-up")

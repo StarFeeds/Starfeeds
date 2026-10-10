@@ -8,6 +8,11 @@
  */
 @theme {
   --color-primary-50: #f9f5ff;
+  /* 100–300 were referenced across the app but never defined (rendered as
+     no colour / black); interpolated between 50 and 400. */
+  --color-primary-100: #f1e6fe;
+  --color-primary-200: #e4ccfd;
+  --color-primary-300: #d5adfc;
   --color-primary-400: #c590fb;
   --color-primary-500: #a25ee6;
   --color-primary-600: #7e2bd1;

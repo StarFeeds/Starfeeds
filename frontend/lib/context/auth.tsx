@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { api } from "@/lib/api/client";
+import { disablePush } from "@/lib/push";
 import { User } from "@/lib/api/types";
 
 interface AuthContextType {
@@ -40,8 +41,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = () => {
-    api.auth.logout();
     setUser(null);
+    // Stop this browser getting the old account's notifications (shared
+    // devices), then drop the tokens the unsubscribe call needs.
+    disablePush()
+      .catch(() => {})
+      .finally(() => api.auth.logout());
   };
 
   return (

@@ -3,6 +3,22 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api/client";
 import { AdminIdea } from "@/lib/api/types";
+import { ideaUrl } from "@/lib/share";
+
+/** Ready-to-paste WhatsApp/X text for the Idea of the day. */
+async function featuredPostText(id: number): Promise<string> {
+  const idea = await api.ideas.get(id, true);
+  const summary = idea.body.replace(/\*\*\s*(.+?)\s*\*\*/g, "$1:").replace(/\s+/g, " ").trim();
+  const short = summary.length > 180 ? summary.slice(0, 179).trimEnd() + "…" : summary;
+  const roles = !idea.team_closed && idea.looking_for?.length ? `
+Looking for: ${idea.looking_for.join(", ")}` : "";
+  return `💡 Idea of the day on LikeMinds
+
+*${idea.title}* by ${idea.author.full_name}
+${short}${roles}
+
+👉 ${ideaUrl(idea)}`;
+}
 
 export default function AdminIdeasPage() {
   const [q, setQ] = useState("");
@@ -11,6 +27,38 @@ export default function AdminIdeasPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<number | null>(null);
+  const [featuredId, setFeaturedId] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    api.admin
+      .featured()
+      .then((r) => setFeaturedId(r.idea_id))
+      .catch(() => {});
+  }, []);
+
+  const feature = async (i: AdminIdea) => {
+    setBusy(i.id);
+    try {
+      setFeaturedId((await api.admin.setFeatured(i.id)).idea_id);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Couldn't feature this post");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const copyPost = async () => {
+    if (!featuredId) return;
+    const text = await featuredPostText(featuredId);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt("Copy this:", text);
+    }
+  };
 
   const load = async (query: string, hidden: boolean) => {
     setLoading(true);
@@ -87,12 +135,33 @@ export default function AdminIdeasPage() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-semibold text-neutral-900 truncate">{i.title}</span>
                   {i.hidden && <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-neutral-200 text-neutral-600">HIDDEN</span>}
+                  {i.id === featuredId && (
+                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-primary-100 text-primary-700">💡 IDEA OF THE DAY</span>
+                  )}
                 </div>
                 <p className="text-xs text-neutral-500 truncate">
                   {i.category} · by {i.author.full_name} · {i.upvote_count} upvotes · {i.comment_count} comments
                 </p>
               </div>
-              <div className="flex gap-2 flex-shrink-0">
+              <div className="flex gap-2 flex-shrink-0 flex-wrap">
+                {i.id === featuredId ? (
+                  <button
+                    onClick={copyPost}
+                    className="px-3 h-8 rounded-full text-xs font-semibold bg-primary-700 text-white hover:bg-primary-600 transition"
+                  >
+                    {copied ? "Copied!" : "Copy WhatsApp post"}
+                  </button>
+                ) : (
+                  !i.hidden && (
+                    <button
+                      onClick={() => feature(i)}
+                      disabled={busy === i.id}
+                      className="px-3 h-8 rounded-full text-xs font-semibold border border-primary-300 text-primary-700 hover:bg-primary-50 disabled:opacity-40 transition"
+                    >
+                      Feature today
+                    </button>
+                  )
+                )}
                 <button
                   onClick={() => toggleHidden(i)}
                   disabled={busy === i.id}

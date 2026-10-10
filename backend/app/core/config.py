@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     # .apps.googleusercontent.com). Unset = /auth/google is disabled.
     GOOGLE_CLIENT_ID: str | None = None
 
+    # Browser push (Web Push / VAPID). Generate a key pair once; the public
+    # key is served to browsers, the private key stays secret. Unset = off.
+    VAPID_PUBLIC_KEY: str | None = None
+    VAPID_PRIVATE_KEY: str | None = None
+    VAPID_SUBJECT: str = "mailto:hello@likeminds.live"
+
     # Shared secret for scheduled jobs (e.g. the weekly digest, triggered by a
     # GitHub Actions cron). Unset = those endpoints are disabled.
     CRON_SECRET: str | None = None
@@ -60,6 +66,10 @@ class Settings(BaseSettings):
     @property
     def smtp_configured(self) -> bool:
         return bool(self.SMTP_HOST and self.SMTP_USER and self.SMTP_PASSWORD)
+
+    @property
+    def push_enabled(self) -> bool:
+        return bool(self.VAPID_PUBLIC_KEY and self.VAPID_PRIVATE_KEY)
 
     @property
     def email_enabled(self) -> bool:

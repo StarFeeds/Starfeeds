@@ -1,3 +1,4 @@
+from app.models.engagement import FeaturedIdea, PushSubscription
 from app.models.idea import Comment, Idea, SavedIdea, Upvote
 from app.models.social import (
     CollaborationRequest,
@@ -21,4 +22,6 @@ __all__ = [
     "Message",
     "GroupMember",
     "GroupMessage",
+    "PushSubscription",
+    "FeaturedIdea",
 ]

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/context/auth";
+import { PushSettingRow } from "@/components/PushSettingRow";
 
 function Toggle({
   on,
@@ -215,6 +216,11 @@ export default function SettingsPage() {
           <ToggleRow label="Weekly digest" value={prefs.weekly} onChange={() => toggle("weekly")} />
           <ToggleRow label="Tips to get started" value={prefs.tips} onChange={() => toggle("tips")} />
           <ToggleRow label="Important Updates" value={prefs.important} onChange={() => toggle("important")} comingSoon />
+        </div>
+
+        <h3 className="font-bold text-neutral-900 mt-5 mb-1">On this device</h3>
+        <div className="divide-y divide-neutral-100">
+          <PushSettingRow />
         </div>
       </section>
 

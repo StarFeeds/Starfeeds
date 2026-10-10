@@ -7,6 +7,8 @@ import { IdeaCard } from "@/components/IdeaCard";
 import { MakePostModal } from "@/components/MakePostModal";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { ExploreStepper } from "@/components/ExploreStepper";
+import { FeaturedIdea } from "@/components/FeaturedIdea";
+import { PushPrompt } from "@/components/PushPrompt";
 import { api } from "@/lib/api/client";
 import { Idea } from "@/lib/api/types";
 import { useAuth } from "@/lib/context/auth";
@@ -165,6 +167,9 @@ export default function HomePage() {
       {showOnboarding && (
         <OnboardingChecklist steps={onboardingSteps} onDismiss={dismissOnboarding} />
       )}
+
+      <PushPrompt />
+      <FeaturedIdea />
 
       {/* Composer */}
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-xs p-4">

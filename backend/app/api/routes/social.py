@@ -405,7 +405,7 @@ async def send_message(
     await db.refresh(msg)
 
     other_id = convo.user_b_id if convo.user_a_id == current_user.id else convo.user_a_id
-    await push_message(other_id, conversation_id, msg)
+    await push_message(other_id, conversation_id, msg, current_user)
     background_tasks.add_task(
         send_activity_email,
         other_id,

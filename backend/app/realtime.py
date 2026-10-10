@@ -92,9 +92,13 @@ async def push_notification(recipient_id: int, notif: Any, actor: Any) -> None:
             },
         },
     )
+    # Not on the site right now? Reach them with a browser push instead.
+    from app.push import notification_push, push_if_offline
+
+    push_if_offline(recipient_id, **notification_push(notif, actor))
 
 
-async def push_message(recipient_id: int, conversation_id: int, msg: Any) -> None:
+async def push_message(recipient_id: int, conversation_id: int, msg: Any, sender: Any = None) -> None:
     await manager.send_to_user(
         recipient_id,
         {
@@ -109,6 +113,10 @@ async def push_message(recipient_id: int, conversation_id: int, msg: Any) -> Non
             },
         },
     )
+    from app.push import push_if_offline
+
+    name = getattr(sender, "full_name", None) or "Someone"
+    push_if_offline(recipient_id, title=f"Message from {name}", body=msg.body, url="/messages", tag=f"dm-{conversation_id}")
 
 
 async def push_group_message(recipient_id: int, idea_id: int, msg: Any, sender: Any) -> None:
@@ -125,4 +133,12 @@ async def push_group_message(recipient_id: int, idea_id: int, msg: Any, sender: 
                 "sender": _public_user(sender),
             },
         },
+    )
+    from app.push import push_group_if_offline
+
+    push_group_if_offline(
+        recipient_id,
+        idea_id,
+        title="New message in your project group",
+        body=f"{getattr(sender, 'full_name', 'Someone')}: {msg.body}",
     )
