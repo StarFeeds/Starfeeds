@@ -62,14 +62,14 @@ def render(first_name: str, waiting: list[tuple[str, str, str | None]], base: st
         f"{rows_html}\n"
         '<p style="margin:6px 0 20px;font-size:14px;line-height:1.6;color:#71717a;">'
         "A quick yes or no keeps people coming back, even a no.</p>\n"
-        f"{button('Review requests', base + '/activity')}"
+        f"{button('Review requests', base + '/activity?tab=collab')}"
     )
     body = wrap(
         inner, reason="You're getting this because of activity on your LikeMinds account.", unsub_url=unsub
     )
     text = (
         f"Hi {first_name},\n\nStill waiting to hear back:\n{rows_text}\n"
-        f"Review requests: {base}/activity\n\n— LikeMinds\n\nStop these emails: {unsub}"
+        f"Review requests: {base}/activity?tab=collab\n\n— LikeMinds\n\nStop these emails: {unsub}"
     )
     return subject, body, text
 

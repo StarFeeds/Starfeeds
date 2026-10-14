@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { api } from "@/lib/api/client";
 import { CollaborationRequest, Notification } from "@/lib/api/types";
+import { isJoinRequest, notificationHref } from "@/lib/notifications";
 
 const TABS = [
   { label: "All", key: "all" },
@@ -204,6 +205,23 @@ function ActivityView() {
                 </p>
                 <p className="text-xs text-neutral-500 mt-0.5">{timeAgo(n.created_at)}</p>
               </div>
+              {isJoinRequest(n) ? (
+                <button
+                  onClick={() => setTab("collab")}
+                  className="px-4 h-9 flex-shrink-0 rounded-full bg-primary-700 hover:bg-primary-600 text-white text-sm font-semibold transition"
+                >
+                  Respond
+                </button>
+              ) : (
+                notificationHref(n) && (
+                  <Link
+                    href={notificationHref(n)!}
+                    className="px-4 h-9 flex-shrink-0 inline-flex items-center rounded-full border border-neutral-300 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition"
+                  >
+                    View
+                  </Link>
+                )
+              )}
             </div>
           ))}
         </div>

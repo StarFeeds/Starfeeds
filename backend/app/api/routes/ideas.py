@@ -483,7 +483,7 @@ async def express_interest(
             subject=f'{current_user.full_name} wants to join "{idea.title}"',
             headline=f'{current_user.full_name} asked to join your project "{idea.title}"',
             preview=note or current_user.headline or None,
-            path="/activity",
+            path="/activity?tab=collab",
             cta_label="Review request",
         )
     return req

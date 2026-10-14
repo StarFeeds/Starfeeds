@@ -95,14 +95,23 @@ def push_group_if_offline(user_id: int, idea_id: int, *, title: str, body: str) 
     push_if_offline(user_id, title=title, body=body, url=f"/projects/{idea_id}/discussion", tag=f"group-{idea_id}")
 
 
+def notification_url(kind: str, text: str, idea_id: int | None) -> str:
+    """Where a notification should take its reader (mirrors the frontend's
+    notificationHref): owners to the request inbox, requesters to the project."""
+    if kind == "collab":
+        if text.startswith("requested to join"):
+            return "/activity?tab=collab"
+        if text.startswith("accepted your request") and idea_id:
+            return f"/projects/{idea_id}/discussion"
+        return f"/i/{idea_id}" if idea_id else "/notifications"
+    if kind in ("comment", "upvote") and idea_id:
+        return f"/i/{idea_id}"
+    return "/notifications"
+
+
 def notification_push(notif: Any, actor: Any) -> dict[str, str]:
     """Title/body/url for an in-app Notification (comments, joins, etc.)."""
     who = getattr(actor, "full_name", None)
     body = f"{who} {notif.text}" if who else notif.text
-    if notif.type in ("comment", "upvote") and notif.idea_id:
-        url = f"/i/{notif.idea_id}"
-    elif notif.type == "collab":
-        url = "/activity"
-    else:
-        url = "/notifications"
+    url = notification_url(notif.type, notif.text, notif.idea_id)
     return {"title": "LikeMinds", "body": body, "url": url, "tag": f"n-{notif.id}"}

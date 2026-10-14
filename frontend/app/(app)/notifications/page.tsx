@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { api } from "@/lib/api/client";
 import { Notification } from "@/lib/api/types";
 import { useRealtime } from "@/lib/context/realtime";
+import { isJoinRequest, notificationHref } from "@/lib/notifications";
 
 type NotifType = Notification["type"];
 
@@ -71,8 +72,8 @@ export default function NotificationsPage() {
 
   const openNotification = (n: Notification) => {
     markOne(n.id);
-    // Collaboration requests are acted on in the Activity tab.
-    if (n.type === "collab") router.push("/activity?tab=collab");
+    const href = notificationHref(n);
+    if (href) router.push(href);
   };
 
   // Prepend notifications that arrive live over the WebSocket.
@@ -175,7 +176,12 @@ export default function NotificationsPage() {
                   )}{" "}
                   {n.text}
                 </p>
-                <p className="text-xs text-neutral-500 mt-0.5">{timeAgo(n.created_at)}</p>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  {timeAgo(n.created_at)}
+                  {isJoinRequest(n) && (
+                    <span className="ml-2 font-semibold text-primary-700">Accept or decline →</span>
+                  )}
+                </p>
               </div>
               {!n.read && <span className="w-2.5 h-2.5 bg-primary-600 rounded-full flex-shrink-0 mt-1.5" />}
             </button>
