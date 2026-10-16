@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { FeedSkeleton } from "@/components/Skeleton";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { IdeaCard } from "@/components/IdeaCard";
@@ -24,10 +25,32 @@ const CATEGORIES = [
   "Other",
 ];
 
+// The default feed view is kept from the last visit and shown instantly,
+// then replaced by fresh results.
+const FEED_CACHE_KEY = "lm_feed";
+
+function readFeedCache(): Idea[] | null {
+  try {
+    const raw = localStorage.getItem(FEED_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as Idea[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeFeedCache(items: Idea[]) {
+  try {
+    const raw = JSON.stringify(items);
+    // Profile photos can be inline images; don't fill the browser's storage.
+    if (raw.length < 1_000_000) localStorage.setItem(FEED_CACHE_KEY, raw);
+    else localStorage.removeItem(FEED_CACHE_KEY);
+  } catch {}
+}
+
 export default function HomePage() {
   const { user, isLoading: authLoading } = useAuth();
   const [ideas, setIdeas] = useState<Idea[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState<"recent" | "top">("recent");
   const [filterCategory, setFilterCategory] = useState("All");
@@ -73,12 +96,20 @@ export default function HomePage() {
   };
 
   const fetchIdeas = async () => {
-    setLoading(true);
+    const isDefaultView = sort === "recent" && filterCategory === "All";
+    const cached = isDefaultView ? readFeedCache() : null;
+    if (cached) {
+      setIdeas(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     setError(null);
     try {
       const cat = filterCategory === "All" ? undefined : filterCategory;
       const resp = await api.ideas.list(1, 10, cat, sort);
       setIdeas(resp.items);
+      if (isDefaultView) writeFeedCache(resp.items);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch ideas");
       setIdeas([]);
@@ -87,10 +118,12 @@ export default function HomePage() {
     }
   };
 
+  // Starts straight away (the request carries the stored login), alongside
+  // the user and Idea-of-the-day requests rather than after them.
   useEffect(() => {
-    if (!authLoading) fetchIdeas();
+    fetchIdeas();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sort, filterCategory, authLoading]);
+  }, [sort, filterCategory]);
 
   const handleUpvote = async (ideaId: number) => {
     try {
@@ -112,9 +145,9 @@ export default function HomePage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-neutral-600">Loading...</p>
-      </div>
+      <AppShell>
+        <FeedSkeleton />
+      </AppShell>
     );
   }
 
@@ -249,7 +282,7 @@ export default function HomePage() {
 
       {/* Feed */}
       {loading ? (
-        <div className="text-center py-12 text-neutral-600">Loading ideas...</div>
+        <FeedSkeleton />
       ) : ideas.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-2xl border border-neutral-200">
           <p className="text-neutral-600 mb-3">No projects here yet.</p>

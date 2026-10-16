@@ -3,7 +3,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, DbSession
-from app.api.routes.ideas import _serialize
+from app.api.routes.ideas import _serialize_many
 from app.models import Idea, User
 from app.schemas.search import SearchResults
 from app.schemas.user import UserPublic
@@ -53,6 +53,6 @@ async def search(
     ).all()
 
     return SearchResults(
-        ideas=[await _serialize(db, idea, current_user.id) for idea in ideas],
+        ideas=await _serialize_many(db, list(ideas), current_user.id),
         users=[UserPublic.model_validate(u) for u in users],
     )

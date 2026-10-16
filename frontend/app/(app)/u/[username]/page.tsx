@@ -8,6 +8,7 @@ import { IdeaCard } from "@/components/IdeaCard";
 import { api } from "@/lib/api/client";
 import { Idea, PublicUser } from "@/lib/api/types";
 import { useAuth } from "@/lib/context/auth";
+import { FeedSkeleton } from "@/components/Skeleton";
 
 export default function UserProfilePage() {
   const params = useParams<{ username: string }>();
@@ -72,7 +73,7 @@ export default function UserProfilePage() {
   if (loading) {
     return (
       <AppShell>
-        <div className="text-center py-12 text-neutral-600">Loading…</div>
+        <FeedSkeleton />
       </AppShell>
     );
   }

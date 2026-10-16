@@ -8,6 +8,7 @@ import { IdeaCard } from "@/components/IdeaCard";
 import { api } from "@/lib/api/client";
 import { CollaborationRequest, Idea } from "@/lib/api/types";
 import { useAuth } from "@/lib/context/auth";
+import { FeedSkeleton } from "@/components/Skeleton";
 
 const TABS = ["Past Ideas", "Contributors", "Interests"] as const;
 type Tab = (typeof TABS)[number];
@@ -232,7 +233,7 @@ export default function ProfilePage() {
 
       {tab === "Past Ideas" &&
         (loading ? (
-          <div className="text-center py-12 text-neutral-600">Loading...</div>
+          <FeedSkeleton />
         ) : ideas.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-2xl border border-neutral-200 text-neutral-600">
             You haven&apos;t posted any ideas yet.

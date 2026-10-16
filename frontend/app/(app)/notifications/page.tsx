@@ -7,6 +7,7 @@ import { api } from "@/lib/api/client";
 import { Notification } from "@/lib/api/types";
 import { useRealtime } from "@/lib/context/realtime";
 import { isJoinRequest, notificationHref } from "@/lib/notifications";
+import { ListSkeleton } from "@/components/Skeleton";
 
 type NotifType = Notification["type"];
 
@@ -139,7 +140,7 @@ export default function NotificationsPage() {
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-neutral-600">Loading...</div>
+        <ListSkeleton />
       ) : items.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-2xl border border-neutral-200 text-neutral-600">
           No notifications yet.

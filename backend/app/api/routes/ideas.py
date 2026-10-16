@@ -31,61 +31,69 @@ from app.schemas.social import CollaborationRequestOut, JoinRequestIn
 router = APIRouter(prefix="/ideas", tags=["ideas"])
 
 
-async def _serialize(db: DbSession, idea: Idea, viewer_id: int | None) -> IdeaOut:
-    upvote_count = await db.scalar(
-        select(func.count()).select_from(Upvote).where(Upvote.idea_id == idea.id)
-    )
-    comment_count = await db.scalar(
-        select(func.count()).select_from(Comment).where(Comment.idea_id == idea.id)
-    )
-    member_count = await db.scalar(
-        select(func.count()).select_from(GroupMember).where(GroupMember.idea_id == idea.id)
-    )
+def _count(model, *where):
+    """Correlated COUNT(*) as a column, evaluated per idea in one query."""
+    return select(func.count()).select_from(model).where(*where).correlate(Idea).scalar_subquery()
 
-    upvoted = saved = False
-    join_status = "none"
+
+async def _serialize_many(db: DbSession, ideas: list[Idea], viewer_id: int | None) -> list[IdeaOut]:
+    """Counts and per-viewer state for a page of ideas in ONE query.
+
+    Each extra query is a round trip to the database, so the old per-idea
+    queries (up to 7 each, ~70 for a feed page) made the feed take seconds.
+    """
+    if not ideas:
+        return []
+    cols = [
+        Idea.id,
+        _count(Upvote, Upvote.idea_id == Idea.id).label("upvotes"),
+        _count(Comment, Comment.idea_id == Idea.id).label("comments"),
+        _count(GroupMember, GroupMember.idea_id == Idea.id).label("members"),
+    ]
     if viewer_id is not None:
-        upvoted = bool(
-            await db.scalar(
-                select(func.count())
-                .select_from(Upvote)
-                .where(Upvote.idea_id == idea.id, Upvote.user_id == viewer_id)
-            )
-        )
-        saved = bool(
-            await db.scalar(
-                select(func.count())
-                .select_from(SavedIdea)
-                .where(SavedIdea.idea_id == idea.id, SavedIdea.user_id == viewer_id)
-            )
-        )
-        if idea.author_id == viewer_id:
-            join_status = "owner"
-        elif await db.scalar(
-            select(func.count())
-            .select_from(GroupMember)
-            .where(GroupMember.idea_id == idea.id, GroupMember.user_id == viewer_id)
-        ):
-            join_status = "member"
-        elif await db.scalar(
-            select(func.count())
-            .select_from(CollaborationRequest)
+        cols += [
+            select(Upvote.id).where(Upvote.idea_id == Idea.id, Upvote.user_id == viewer_id).exists().label("upvoted"),
+            select(SavedIdea.id)
+            .where(SavedIdea.idea_id == Idea.id, SavedIdea.user_id == viewer_id)
+            .exists()
+            .label("saved"),
+            select(GroupMember.id)
+            .where(GroupMember.idea_id == Idea.id, GroupMember.user_id == viewer_id)
+            .exists()
+            .label("is_member"),
+            select(CollaborationRequest.id)
             .where(
-                CollaborationRequest.idea_id == idea.id,
+                CollaborationRequest.idea_id == Idea.id,
                 CollaborationRequest.from_user_id == viewer_id,
                 CollaborationRequest.status == "pending",
             )
-        ):
-            join_status = "pending"
+            .exists()
+            .label("pending"),
+        ]
+    rows = {r.id: r for r in (await db.execute(select(*cols).where(Idea.id.in_([i.id for i in ideas])))).all()}
 
-    out = IdeaOut.model_validate(idea)
-    out.upvote_count = upvote_count or 0
-    out.comment_count = comment_count or 0
-    out.upvoted_by_me = upvoted
-    out.saved_by_me = saved
-    out.member_count = member_count or 0
-    out.join_status = join_status
+    out: list[IdeaOut] = []
+    for idea in ideas:
+        r = rows.get(idea.id)
+        item = IdeaOut.model_validate(idea)
+        item.upvote_count = (r.upvotes if r else 0) or 0
+        item.comment_count = (r.comments if r else 0) or 0
+        item.member_count = (r.members if r else 0) or 0
+        if viewer_id is not None and r is not None:
+            item.upvoted_by_me = bool(r.upvoted)
+            item.saved_by_me = bool(r.saved)
+            if idea.author_id == viewer_id:
+                item.join_status = "owner"
+            elif r.is_member:
+                item.join_status = "member"
+            elif r.pending:
+                item.join_status = "pending"
+        out.append(item)
     return out
+
+
+async def _serialize(db: DbSession, idea: Idea, viewer_id: int | None) -> IdeaOut:
+    return (await _serialize_many(db, [idea], viewer_id))[0]
 
 
 @router.get("", response_model=IdeaListResponse)
@@ -126,10 +134,10 @@ async def list_ideas(
             .subquery()
         )
         stmt = stmt.outerjoin(upvote_sq, upvote_sq.c.idea_id == Idea.id).order_by(
-            func.coalesce(upvote_sq.c.c, 0).desc(), Idea.created_at.desc()
+            func.coalesce(upvote_sq.c.c, 0).desc(), Idea.created_at.desc(), Idea.id.desc()
         )
     else:
-        stmt = stmt.order_by(Idea.created_at.desc())
+        stmt = stmt.order_by(Idea.created_at.desc(), Idea.id.desc())
 
     total = await db.scalar(
         select(func.count()).select_from(stmt.order_by(None).subquery())
@@ -138,7 +146,7 @@ async def list_ideas(
     stmt = stmt.offset((page - 1) * page_size).limit(page_size)
     ideas = (await db.scalars(stmt)).all()
 
-    items = [await _serialize(db, idea, viewer_id) for idea in ideas]
+    items = await _serialize_many(db, list(ideas), viewer_id)
     return IdeaListResponse(
         items=items, total=total or 0, page=page, page_size=page_size
     )

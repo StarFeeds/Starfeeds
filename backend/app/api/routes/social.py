@@ -255,34 +255,58 @@ async def decline_collab(
 # --------------------------------------------------------------------------- #
 # Conversations & messages
 # --------------------------------------------------------------------------- #
+async def _conversations_out(
+    db: DbSession, convos: list[Conversation], me_id: int
+) -> list[ConversationOut]:
+    """Last message and unread count for many conversations in two queries."""
+    from app.schemas.user import UserPublic
+
+    if not convos:
+        return []
+    ids = [c.id for c in convos]
+    newest = (
+        select(Message.conversation_id, func.max(Message.id).label("mid"))
+        .where(Message.conversation_id.in_(ids))
+        .group_by(Message.conversation_id)
+        .subquery()
+    )
+    last = {
+        m.conversation_id: m
+        for m in (await db.scalars(select(Message).join(newest, Message.id == newest.c.mid))).all()
+    }
+    unread = dict(
+        (
+            await db.execute(
+                select(Message.conversation_id, func.count())
+                .where(
+                    Message.conversation_id.in_(ids),
+                    Message.sender_id != me_id,
+                    Message.read.is_(False),
+                )
+                .group_by(Message.conversation_id)
+            )
+        ).all()
+    )
+    out = []
+    for convo in convos:
+        other = convo.user_b if convo.user_a_id == me_id else convo.user_a
+        m = last.get(convo.id)
+        out.append(
+            ConversationOut(
+                id=convo.id,
+                other_user=UserPublic.model_validate(other),
+                last_message=m.body if m else None,
+                last_time=m.created_at if m else None,
+                unread=unread.get(convo.id, 0),
+            )
+        )
+    return out
+
+
 async def _conversation_out(
     db: DbSession, convo: Conversation, me_id: int
 ) -> ConversationOut:
-    other = convo.user_b if convo.user_a_id == me_id else convo.user_a
-    last = await db.scalar(
-        select(Message)
-        .where(Message.conversation_id == convo.id)
-        .order_by(Message.created_at.desc())
-        .limit(1)
-    )
-    unread = await db.scalar(
-        select(func.count())
-        .select_from(Message)
-        .where(
-            Message.conversation_id == convo.id,
-            Message.sender_id != me_id,
-            Message.read.is_(False),
-        )
-    )
-    from app.schemas.user import UserPublic
-
-    return ConversationOut(
-        id=convo.id,
-        other_user=UserPublic.model_validate(other),
-        last_message=last.body if last else None,
-        last_time=last.created_at if last else None,
-        unread=unread or 0,
-    )
+    return (await _conversations_out(db, [convo], me_id))[0]
 
 
 @router.get("/conversations", response_model=list[ConversationOut])
@@ -305,7 +329,7 @@ async def list_conversations(
             .order_by(Conversation.updated_at.desc())
         )
     ).all()
-    return [await _conversation_out(db, c, current_user.id) for c in convos]
+    return await _conversations_out(db, list(convos), current_user.id)
 
 
 async def _get_or_create_conversation(

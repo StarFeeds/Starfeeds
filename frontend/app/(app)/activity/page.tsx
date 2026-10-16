@@ -7,6 +7,7 @@ import { AppShell } from "@/components/AppShell";
 import { api } from "@/lib/api/client";
 import { CollaborationRequest, Notification } from "@/lib/api/types";
 import { isJoinRequest, notificationHref } from "@/lib/notifications";
+import { ListSkeleton } from "@/components/Skeleton";
 
 const TABS = [
   { label: "All", key: "all" },
@@ -132,7 +133,7 @@ function ActivityView() {
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-neutral-600">Loading...</div>
+        <ListSkeleton />
       ) : isEmpty ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-neutral-200">
           <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary-50 flex items-center justify-center">
@@ -233,7 +234,7 @@ function ActivityView() {
 export default function ActivityPage() {
   return (
     <Suspense
-      fallback={<AppShell><div className="text-center py-12 text-neutral-600">Loading…</div></AppShell>}
+      fallback={<AppShell><ListSkeleton /></AppShell>}
     >
       <ActivityView />
     </Suspense>

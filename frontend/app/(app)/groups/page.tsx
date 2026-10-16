@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { api } from "@/lib/api/client";
 import { GroupSummary } from "@/lib/api/types";
+import { ListSkeleton } from "@/components/Skeleton";
 
 export default function GroupsPage() {
   const [groups, setGroups] = useState<GroupSummary[]>([]);
@@ -35,7 +36,7 @@ export default function GroupsPage() {
       </p>
 
       {loading ? (
-        <div className="text-center py-12 text-neutral-600">Loading…</div>
+        <ListSkeleton />
       ) : groups.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-2xl border border-neutral-200 text-neutral-600">
           You haven&apos;t joined any projects yet. Explore the feed and request to join one.

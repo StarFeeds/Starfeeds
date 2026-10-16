@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { IdeaCard } from "@/components/IdeaCard";
 import { api } from "@/lib/api/client";
 import { Idea } from "@/lib/api/types";
+import { FeedSkeleton } from "@/components/Skeleton";
 
 export default function SavedPage() {
   const [ideas, setIdeas] = useState<Idea[]>([]);
@@ -61,7 +62,7 @@ export default function SavedPage() {
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-neutral-600">Loading...</div>
+        <FeedSkeleton />
       ) : ideas.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-2xl border border-neutral-200 text-neutral-600">
           You haven&apos;t saved any ideas yet.

@@ -47,16 +47,22 @@ async def my_groups(db: DbSession, current_user: CurrentUser) -> list[GroupSumma
             .order_by(Idea.created_at.desc())
         )
     ).all()
+    counts = dict(
+        (
+            await db.execute(
+                select(GroupMember.idea_id, func.count())
+                .where(GroupMember.idea_id.in_([i.id for i in ideas]))
+                .group_by(GroupMember.idea_id)
+            )
+        ).all()
+    ) if ideas else {}
     out: list[GroupSummary] = []
     for idea in ideas:
-        count = await db.scalar(
-            select(func.count()).select_from(GroupMember).where(GroupMember.idea_id == idea.id)
-        )
         out.append(
             GroupSummary(
                 idea_id=idea.id,
                 title=idea.title,
-                member_count=count or 0,
+                member_count=counts.get(idea.id, 0),
                 is_owner=idea.author_id == current_user.id,
                 team_closed=idea.team_closed,
             )
