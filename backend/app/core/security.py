@@ -8,7 +8,7 @@ from app.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-TokenType = Literal["access", "refresh", "unsubscribe"]
+TokenType = Literal["access", "refresh", "unsubscribe", "partner_report"]
 
 
 def hash_password(password: str) -> str:
@@ -57,6 +57,11 @@ UNSUBSCRIBE_SCOPES = {
 def create_unsubscribe_token(subject: str | int, scope: str = "activity") -> str:
     """Long-lived token for one-click "stop these emails" links."""
     return _create_token(subject, "unsubscribe", timedelta(days=365), scope=scope)
+
+
+def create_partner_report_token(ref: str) -> str:
+    """Private link to a partner's community report (subject = tracking ref)."""
+    return _create_token(ref, "partner_report", timedelta(days=3650))
 
 
 def decode_unsubscribe_token(token: str) -> tuple[int, str] | None:

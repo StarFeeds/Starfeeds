@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, Text
+from sqlalchemy import Date, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin
@@ -28,3 +28,18 @@ class FeaturedIdea(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     day: Mapped[date] = mapped_column(Date, unique=True, index=True)
     idea_id: Mapped[int] = mapped_column(ForeignKey("ideas.id", ondelete="CASCADE"), index=True)
+
+
+class PartnerLead(Base, TimestampMixin):
+    """An enquiry from the /partners page (hub, bootcamp, accelerator...)."""
+
+    __tablename__ = "partner_leads"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120))
+    organisation: Mapped[str] = mapped_column(String(160))
+    role: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    email: Mapped[str] = mapped_column(String(255))
+    phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    community_size: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)

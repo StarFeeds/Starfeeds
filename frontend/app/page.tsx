@@ -112,6 +112,7 @@ export default function LandingPage() {
 
         <footer className="border-t border-neutral-200 py-8 text-center text-xs text-neutral-500">
           © LikeMinds — build together. ·{" "}
+          <Link href="/partners" className="hover:text-neutral-700">For hubs &amp; bootcamps</Link> ·{" "}
           <Link href="/privacy" className="hover:text-neutral-700">Privacy</Link> ·{" "}
           <Link href="/terms" className="hover:text-neutral-700">Terms</Link>
         </footer>

@@ -251,3 +251,43 @@ export interface TokenPair {
   refresh_token: string;
   token_type: string;
 }
+
+/** Enquiry from the /partners page. */
+export interface PartnerInterest {
+  name: string;
+  organisation: string;
+  role?: string;
+  email: string;
+  phone?: string;
+  community_size?: string;
+  message?: string;
+}
+
+export interface PartnerLead extends PartnerInterest {
+  id: number;
+  created_at: string;
+}
+
+/** What a partner's community (members who joined via its ?ref= link) did. */
+export interface PartnerReport {
+  ref: string;
+  generated_at: string;
+  members: number;
+  posted: number;
+  asked: number;
+  in_team: number;
+  teams: number;
+  active_teams: number;
+  weeks: { week: string; signups: number; joined_team: number }[];
+  projects: {
+    id: number;
+    title: string;
+    owner: string;
+    owner_is_member: boolean;
+    team_size: number;
+    looking_for: string[];
+    team_closed: boolean;
+    created_at: string;
+  }[];
+  share_url: string | null;
+}

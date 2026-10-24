@@ -23,6 +23,9 @@ import {
   PublicUser,
   GroupMessage,
   GroupSummary,
+  PartnerInterest,
+  PartnerLead,
+  PartnerReport,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -536,5 +539,21 @@ export const api = {
     /** How many people a broadcast would reach (in-app / by email). */
     announcementAudience: async (): Promise<{ in_app: number; email: number }> =>
       apiCall<{ in_app: number; email: number }>("/admin/announcements/audience", { requiresAuth: true }),
+
+    /** A partner community's report (by tracking ref), with its private share link. */
+    partnerReport: async (ref: string): Promise<PartnerReport> =>
+      apiCall<PartnerReport>(`/admin/partners/report?ref=${encodeURIComponent(ref)}`, { requiresAuth: true }),
+
+    partnerLeads: async (): Promise<PartnerLead[]> => apiCall<PartnerLead[]>("/admin/partners/leads", { requiresAuth: true }),
+  },
+
+  partners: {
+    /** The "Run a pilot" form on /partners. */
+    interest: async (data: PartnerInterest): Promise<void> => {
+      await apiCall("/partners/interest", { method: "POST", body: JSON.stringify(data) });
+    },
+    /** A partner's report, opened from its private link (no login). */
+    report: async (token: string): Promise<PartnerReport> =>
+      apiCall<PartnerReport>(`/partners/report?token=${encodeURIComponent(token)}`),
   },
 };

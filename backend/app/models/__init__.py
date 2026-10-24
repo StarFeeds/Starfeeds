@@ -1,4 +1,4 @@
-from app.models.engagement import FeaturedIdea, PushSubscription
+from app.models.engagement import FeaturedIdea, PartnerLead, PushSubscription
 from app.models.idea import Comment, Idea, SavedIdea, Upvote
 from app.models.social import (
     CollaborationRequest,
@@ -11,6 +11,7 @@ from app.models.social import (
 from app.models.user import User
 
 __all__ = [
+    "PartnerLead",
     "User",
     "Idea",
     "Upvote",
