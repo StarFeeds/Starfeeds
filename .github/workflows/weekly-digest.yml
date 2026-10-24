@@ -20,7 +20,7 @@ jobs:
       - name: Trigger weekly digest
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          API_URL: ${{ vars.API_URL || 'https://starfeeds.onrender.com' }}
+          API_URL: ${{ vars.API_URL || 'https://api.likeminds.live' }}
           TO: ${{ inputs.to }}
         run: |
           if [ -z "$CRON_SECRET" ]; then

@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
     // safe to bundle. Read it from GOOGLE_CLIENT_ID too, since Vercel may not
     // allow saving a NEXT_PUBLIC_ name. Inlined at build time: redeploy after changing.
     NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "",
+    // The API address is public too (every browser calls it); same fallback.
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || "",
   },
 };
 

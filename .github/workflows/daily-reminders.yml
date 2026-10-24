@@ -15,7 +15,7 @@ jobs:
       - name: Trigger daily reminders
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          API_URL: ${{ vars.API_URL || 'https://starfeeds.onrender.com' }}
+          API_URL: ${{ vars.API_URL || 'https://api.likeminds.live' }}
         run: |
           if [ -z "$CRON_SECRET" ]; then
             echo "::error::Add a CRON_SECRET repository secret (same value as on Render)."

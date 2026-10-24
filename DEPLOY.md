@@ -28,7 +28,7 @@ Notes
 
 1. Vercel → **New Project** → import the repo.
 2. Set **Root Directory = `frontend`** (Vercel auto-detects Next.js).
-3. Add env var **`NEXT_PUBLIC_API_URL`** = your Render API URL, e.g. `https://starfeeds-api.onrender.com` (no trailing slash, no `/api/v1`).
+3. Add env var **`API_URL`** (or `NEXT_PUBLIC_API_URL`) = your API URL, e.g. `https://api.likeminds.live` (no trailing slash, no `/api/v1`).
 4. Deploy. The realtime WebSocket URL is derived automatically (`https` → `wss`).
 5. Copy the resulting Vercel URL back into the API's `CORS_ORIGINS` (step 1.4) and redeploy the API.
 
