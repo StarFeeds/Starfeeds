@@ -119,8 +119,84 @@ export function TeamFunnelPanel() {
               ))}
             </div>
           </div>
+
+          <div className="lg:col-span-3 border-t border-neutral-100 pt-4">
+            <SourcesTable rows={data.sources ?? []} days={data.days} />
+          </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Which links bring people who go on to form teams, plus a tracking-link maker. */
+function SourcesTable({ rows, days }: { rows: TeamFunnel["sources"]; days: number }) {
+  const [name, setName] = useState("");
+  const [copied, setCopied] = useState(false);
+  const slug = name.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+  const link = `https://www.likeminds.live/?ref=${slug}`;
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch {
+      window.prompt("Copy this link:", link);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-2">Where sign-ups came from ({days}d)</p>
+        {rows.length === 0 ? (
+          <p className="text-sm text-neutral-500">No sign-ups in this period.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-neutral-500">
+                  <th className="py-1.5 pr-3 font-semibold">Source</th>
+                  <th className="py-1.5 px-3 font-semibold text-right">Signed up</th>
+                  <th className="py-1.5 px-3 font-semibold text-right">Posted or asked</th>
+                  <th className="py-1.5 pl-3 font-semibold text-right">In a team</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {rows.map((r) => (
+                  <tr key={r.source}>
+                    <td className="py-1.5 pr-3 font-medium text-neutral-800 truncate max-w-[12rem]">{r.source}</td>
+                    <td className="py-1.5 px-3 text-right tabular-nums">{r.signups}</td>
+                    <td className="py-1.5 px-3 text-right tabular-nums">{r.activated}</td>
+                    <td className="py-1.5 pl-3 text-right tabular-nums font-semibold text-primary-700">{r.in_team}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="mt-2 text-xs text-neutral-400">@name = joined from that member&apos;s invite or shared idea.</p>
+      </div>
+
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-2">Make a tracking link</p>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. unilag-whatsapp"
+          className="w-full h-9 px-3 rounded-lg border border-neutral-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200"
+        />
+        {slug && (
+          <div className="mt-2 flex items-center gap-2">
+            <code className="flex-1 min-w-0 truncate text-xs bg-neutral-50 border border-neutral-200 rounded px-2 py-1.5">{link}</code>
+            <button onClick={copy} className="h-8 px-3 rounded-full bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold">
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+        )}
+        <p className="mt-2 text-xs text-neutral-400">Use one link per group or campaign so you can compare them here.</p>
+      </div>
     </div>
   );
 }

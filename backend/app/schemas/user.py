@@ -13,6 +13,8 @@ class UserCreate(UserBase):
     password: str = Field(min_length=8, max_length=128)
     # WhatsApp / contact number (optional at signup).
     phone: str | None = Field(default=None, max_length=40)
+    # The ?ref= the visitor arrived with (campaign name or inviter's username).
+    ref: str | None = Field(default=None, max_length=200)
 
 
 class UserPublic(BaseModel):

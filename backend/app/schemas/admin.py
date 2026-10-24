@@ -106,6 +106,15 @@ class AnnouncementCreate(BaseModel):
     email: bool = True
 
 
+class SourceRow(BaseModel):
+    """Sign-ups from one ?ref= source and how far they got."""
+
+    source: str  # campaign slug, "@username" for member invites, or "direct"
+    signups: int
+    activated: int  # posted an idea or asked to join one
+    in_team: int  # got accepted into a team, or accepted someone into theirs
+
+
 class TeamFunnel(BaseModel):
     """Is LikeMinds turning sign-ups into teams? (see GET /admin/funnel)"""
 
@@ -130,3 +139,5 @@ class TeamFunnel(BaseModel):
     nudged_acted: int = 0
     # Accepted requests per week (oldest first), the north-star trend.
     teams_by_week: list[DailyCount]
+    # Where the window's sign-ups came from (biggest first).
+    sources: list[SourceRow] = []

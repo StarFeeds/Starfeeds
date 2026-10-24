@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/context/auth";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
+import { InviteCard } from "@/components/InviteCard";
 
 const navItems = [
   {
@@ -105,6 +106,8 @@ export function Sidebar() {
           })}
         </nav>
       </div>
+
+      <InviteCard />
 
       {/* Logout */}
       <button

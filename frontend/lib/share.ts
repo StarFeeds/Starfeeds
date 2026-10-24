@@ -1,6 +1,7 @@
 /** Shareable links for ideas, and safe post-login redirects. */
 
 import type { Idea } from "@/lib/api/types";
+import { withRef } from "@/lib/referral";
 
 /** Roles authors can recruit for (shown as chips in the composer). */
 export const ROLES = ["Co-founder", "Developer", "Designer", "Marketer", "Product manager", "Investor"];
@@ -33,8 +34,10 @@ export function shareText(idea: Pick<Idea, "title" | "looking_for">): string {
   return `I'm building "${idea.title}" on LikeMinds.${roles} Want to join?`;
 }
 
-export function shareTargets(idea: Pick<Idea, "id" | "title" | "looking_for">) {
-  const url = ideaUrl(idea);
+/** Share links for an idea. `ref` (the sharer's username) credits them with
+ *  anyone who signs up from the link. */
+export function shareTargets(idea: Pick<Idea, "id" | "title" | "looking_for">, ref?: string | null) {
+  const url = withRef(ideaUrl(idea), ref);
   const text = shareText(idea);
   const enc = encodeURIComponent;
   return {

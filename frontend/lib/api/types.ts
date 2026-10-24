@@ -147,6 +147,8 @@ export interface TeamFunnel {
   nudged_came_back: number;
   nudged_acted: number;
   teams_by_week: { date: string; count: number }[];
+  /** Sign-ups by ?ref= source: a campaign, "@username" (member invite) or "direct". */
+  sources: { source: string; signups: number; activated: number; in_team: number }[];
 }
 
 export type UnsubscribeScope = "activity" | "weekly" | "announcements" | "tips";

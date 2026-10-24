@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Idea } from "@/lib/api/types";
 import { shareTargets } from "@/lib/share";
+import { useAuth } from "@/lib/context/auth";
 
 type ShareIdea = Pick<Idea, "id" | "title" | "looking_for">;
 
@@ -18,7 +19,8 @@ const ICONS = {
 
 /** WhatsApp / X / LinkedIn / copy-link buttons for one idea. */
 export function ShareOptions({ idea, onDone }: { idea: ShareIdea; onDone?: () => void }) {
-  const t = shareTargets(idea);
+  const { user } = useAuth();
+  const t = shareTargets(idea, user?.username);
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
@@ -68,9 +70,10 @@ export function ShareButton({
   labelClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const { user } = useAuth();
 
   const onClick = async () => {
-    const t = shareTargets(idea);
+    const t = shareTargets(idea, user?.username);
     if (typeof navigator.share === "function" && window.matchMedia("(pointer: coarse)").matches) {
       try {
         await navigator.share({ title: idea.title, text: t.text, url: t.url });

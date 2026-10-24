@@ -41,6 +41,12 @@ class User(Base, TimestampMixin):
     # Signup metadata for admin visibility.
     signup_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
     signup_location: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    # Where they came from: the ?ref= on the link they arrived by (a campaign
+    # like "unilag", or a member's username), and that member if it was one.
+    signup_source: Mapped[str | None] = mapped_column(String(60), nullable=True, index=True)
+    referred_by_id: Mapped[int | None] = mapped_column(
+        sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     is_online: Mapped[bool] = mapped_column(default=False)
     is_admin: Mapped[bool] = mapped_column(default=False, server_default=sa.false())
     is_active: Mapped[bool] = mapped_column(default=True, server_default=sa.true())

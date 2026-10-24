@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status
 from sqlalchemy import desc, func, or_, select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import aliased, selectinload
 
 from app.announcement_email import send_announcement_emails
 from app.featured import featured_idea_id, set_featured
@@ -32,6 +32,7 @@ from app.schemas.admin import (
     AnnouncementCreate,
     DailyCount,
     OnlineUser,
+    SourceRow,
     TeamFunnel,
     TopIdea,
 )
@@ -315,6 +316,53 @@ async def funnel(db: DbSession, admin: AdminUser, days: int = Query(30, ge=7, le
         if key in weekly:
             weekly[key] += 1
 
+    # Sign-ups by source. "In a team" = accepted into someone's project, or
+    # accepted someone into theirs (at any time, not just in the window).
+    sources: list[SourceRow] = []
+    if new_users:
+        Inviter = aliased(User)
+        signup_rows = (
+            await db.execute(
+                select(User.id, User.signup_source, Inviter.username)
+                .outerjoin(Inviter, Inviter.id == User.referred_by_id)
+                .where(User.id.in_(new_users))
+            )
+        ).all()
+        teamed = set(
+            (
+                await db.scalars(
+                    select(CollaborationRequest.from_user_id).where(
+                        CollaborationRequest.status == "accepted", CollaborationRequest.from_user_id.in_(new_users)
+                    )
+                )
+            ).all()
+        ) | set(
+            (
+                await db.scalars(
+                    select(CollaborationRequest.to_user_id).where(
+                        CollaborationRequest.status == "accepted", CollaborationRequest.to_user_id.in_(new_users)
+                    )
+                )
+            ).all()
+        )
+        activated_ids = posters | requesters
+        by_source: dict[str, list[int]] = {}
+        for uid, src, inviter in signup_rows:
+            label = f"@{inviter}" if inviter else (src or "direct")
+            by_source.setdefault(label, []).append(uid)
+        sources = sorted(
+            (
+                SourceRow(
+                    source=label,
+                    signups=len(ids),
+                    activated=sum(i in activated_ids for i in ids),
+                    in_team=sum(i in teamed for i in ids),
+                )
+                for label, ids in by_source.items()
+            ),
+            key=lambda r: (-r.signups, r.source),
+        )[:20]
+
     return TeamFunnel(
         days=days,
         signups=len(new_users),
@@ -332,6 +380,7 @@ async def funnel(db: DbSession, admin: AdminUser, days: int = Query(30, ge=7, le
         nudged_came_back=await _count(db, User, User.last_nudge_at >= start, User.last_seen_at > User.last_nudge_at),
         nudged_acted=await _count(db, User, User.last_nudge_at >= start, ~inactive_condition()),
         teams_by_week=[DailyCount(date=k, count=v) for k, v in weekly.items()],
+        sources=sources,
     )
 
 

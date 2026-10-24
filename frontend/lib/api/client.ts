@@ -161,10 +161,17 @@ async function apiCall<T>(
 
 export const api = {
   auth: {
-    register: async (email: string, username: string, fullName: string, password: string, phone?: string): Promise<TokenPair> => {
+    register: async (
+      email: string,
+      username: string,
+      fullName: string,
+      password: string,
+      phone?: string,
+      ref?: string
+    ): Promise<TokenPair> => {
       const tokens = await apiCall<TokenPair>("/auth/register", {
         method: "POST",
-        body: JSON.stringify({ email, username, full_name: fullName, password, phone: phone || null }),
+        body: JSON.stringify({ email, username, full_name: fullName, password, phone: phone || null, ref: ref || null }),
       });
       setStoredTokens({ access: tokens.access_token, refresh: tokens.refresh_token });
       return tokens;
@@ -180,10 +187,10 @@ export const api = {
     },
 
     /** Sign in / sign up with a Google Identity Services credential. */
-    google: async (credential: string): Promise<TokenPair & { is_new: boolean }> => {
+    google: async (credential: string, ref?: string): Promise<TokenPair & { is_new: boolean }> => {
       const tokens = await apiCall<TokenPair & { is_new: boolean }>("/auth/google", {
         method: "POST",
-        body: JSON.stringify({ credential }),
+        body: JSON.stringify({ credential, ref: ref || null }),
       });
       setStoredTokens({ access: tokens.access_token, refresh: tokens.refresh_token });
       return tokens;
@@ -200,6 +207,11 @@ export const api = {
 
     me: async (): Promise<User> => {
       return apiCall<User>("/auth/me", { requiresAuth: true });
+    },
+
+    /** How many people joined through my invite and share links. */
+    invites: async (): Promise<{ count: number }> => {
+      return apiCall<{ count: number }>("/auth/me/invites", { requiresAuth: true });
     },
 
     updateProfile: async (data: UserUpdate): Promise<User> => {

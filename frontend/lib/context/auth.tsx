@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { api } from "@/lib/api/client";
 import { disablePush } from "@/lib/push";
+import { captureRef } from "@/lib/referral";
 import { User } from "@/lib/api/types";
 
 interface AuthContextType {
@@ -66,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    captureRef(); // every page is wrapped in this provider
     const cached = readCachedUser();
     if (cached) {
       setUser(cached);

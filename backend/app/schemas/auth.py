@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, Field, EmailStr
 
 
 class LoginRequest(BaseModel):
@@ -13,6 +13,7 @@ class RefreshRequest(BaseModel):
 class GoogleAuthRequest(BaseModel):
     # The ID token from Google Identity Services ("credential").
     credential: str
+    ref: str | None = Field(default=None, max_length=200)
 
 
 class TokenPair(BaseModel):

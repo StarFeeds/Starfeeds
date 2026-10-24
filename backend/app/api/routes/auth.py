@@ -65,6 +65,8 @@ async def register(
         signup_ip=ip,
     )
     db.add(user)
+    await db.flush()
+    await _apply_ref(db, user, payload.ref)
     await db.commit()
     await db.refresh(user)
 
@@ -74,6 +76,25 @@ async def register(
     background_tasks.add_task(geolocate_and_save, user.id, ip)
 
     return _tokens_for(user)
+
+
+async def _apply_ref(db: DbSession, user: User, ref: str | None) -> None:
+    """Record where a new member came from. `ref` is free text from a URL, so
+    keep only a short slug; if it's a member's username, credit them."""
+    slug = re.sub(r"[^a-z0-9_-]", "", (ref or "").strip().lower().lstrip("@"))[:60]
+    if not slug:
+        return
+    user.signup_source = slug
+    inviter = await db.scalar(select(User.id).where(func.lower(User.username) == slug))
+    if inviter is not None and inviter != user.id:
+        user.referred_by_id = inviter
+
+
+@router.get("/me/invites")
+async def my_invites(db: DbSession, current_user: CurrentUser) -> dict[str, int]:
+    """How many people joined through this member's links."""
+    count = await db.scalar(select(func.count()).select_from(User).where(User.referred_by_id == current_user.id))
+    return {"count": count or 0}
 
 
 @router.post("/login", response_model=TokenPair)
@@ -143,6 +164,8 @@ async def google_sign_in(
             signup_ip=ip,
         )
         db.add(user)
+        await db.flush()
+        await _apply_ref(db, user, payload.ref)
         await db.commit()
         await db.refresh(user)
         background_tasks.add_task(send_welcome_email, user.email, user.full_name)

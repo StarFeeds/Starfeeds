@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { nextPath, withNext } from "@/lib/share";
 import { api } from "@/lib/api/client";
+import { getRef } from "@/lib/referral";
 import { useAuth } from "@/lib/context/auth";
 import { AuthHero, SocialSignIn } from "@/components/auth-ui";
 import { Logo } from "@/components/Logo";
@@ -57,7 +58,7 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      await api.auth.register(email, deriveUsername(email), fullName, password, whatsapp.trim() || undefined);
+      await api.auth.register(email, deriveUsername(email), fullName, password, whatsapp.trim() || undefined, getRef());
       await refetchUser();
       router.push(nextPath());
     } catch (err) {

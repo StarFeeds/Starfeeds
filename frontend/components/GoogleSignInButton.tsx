@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api/client";
+import { getRef } from "@/lib/referral";
 import { useAuth } from "@/lib/context/auth";
 import { nextPath } from "@/lib/share";
 
@@ -67,7 +68,7 @@ export function GoogleSignInButton({ text = "continue_with" }: { text?: GsiButto
       setBusy(true);
       setError(null);
       try {
-        await api.auth.google(credential);
+        await api.auth.google(credential, getRef());
         await refetchUser();
         router.push(nextPath());
       } catch (err) {
